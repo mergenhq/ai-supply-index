@@ -81,6 +81,26 @@ the AI economy is itself a conflict worth naming.
 
 ---
 
+## Licensing
+
+| what | licence | file |
+|---|---|---|
+| **Data** — `ai-arz-serisi.ndjson`, `*.ots`, tables in this README | **CC BY 4.0** | `LICENSE-DATA` |
+| **Code** — `ai_arz_toplayici.py`, `ai_arz_tazelik_bekci.py`, `kos_haftalik.sh` | **MIT** | `LICENSE` |
+
+Use the data freely, including commercially — attribution is the only condition.
+
+## How to cite
+
+```
+AI Supply Index (2026). Weekly timestamped measurement of the AI economy's supply side.
+mergenhq. https://github.com/mergenhq/ai-supply-index
+— accessed YYYY-MM-DD, series stamp sha256:681d8310e3249352…
+```
+
+A single citation format is deliberate: it makes attribution countable, which is the
+only way this series can be evaluated as a track record rather than as a claim.
+
 ## Reproduce it
 
 ```bash

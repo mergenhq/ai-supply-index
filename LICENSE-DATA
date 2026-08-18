@@ -1,0 +1,16 @@
+# Data licence — Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+The **data** in this repository is licensed under CC BY 4.0.
+Full text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Covered files:
+- `ai-arz-serisi.ndjson`  (the measurement series)
+- `*.ots`                 (OpenTimestamps proofs)
+- the measurement tables reproduced in `README.md`
+
+You are free to share and adapt this data for any purpose, including
+commercially, provided you give appropriate credit (see "How to cite" in
+README.md), link to the licence, and indicate if changes were made.
+
+The **code** in this repository (`ai_arz_toplayici.py`, `ai_arz_tazelik_bekci.py`,
+`kos_haftalik.sh`) is licensed separately under the MIT License — see `LICENSE`.
