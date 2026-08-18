@@ -1,0 +1,201 @@
+{
+  "_meta": {
+    "purpose": "Turkish -> English key map for the AI Supply Index series (ai-arz-serisi.ndjson).",
+    "why_keys_are_turkish": "The series is append-only and OpenTimestamps-stamped. Renaming keys in place would make earlier lines unreadable and put two schemas in one file. The keys are therefore FROZEN; this map is the English contract, and to_english.py generates an English-keyed mirror (series-en.ndjson) without touching the original.",
+    "source_of_truth": "This file. The Schema table in README.md is generated from it via `python3 to_english.py --schema-md`.",
+    "schema_version": "0.3",
+    "generated_for_collector_version": "0.3",
+    "key_count": 104
+  },
+
+  "passthrough": {
+    "histogram_buckets": {
+      "rule": "Every direct child of a `histogram` object is a numeric bucket label produced at runtime (e.g. \"<1\", \"1-10\", \">=10000\"). These are DATA, not schema, and are copied through unchanged.",
+      "examples": ["<1", "1-10", "100-1000", ">=10000", "100000-1e+06"]
+    },
+    "package_identifiers": {
+      "rule": "For the endpoints listed below, every direct child of `ozet` is a package or repository identifier chosen at runtime. These are DATA, not schema, and are copied through unchanged.",
+      "endpoints": ["npm_downloads", "pypi_downloads", "github_repos"],
+      "examples": ["@anthropic-ai/sdk", "anthropic", "langchain-ai/langchain", "Significant-Gravitas/AutoGPT"]
+    }
+  },
+
+  "groups": [
+    {
+      "name": "Record envelope",
+      "note": "Present on every line of the series. One line = one endpoint in one run.",
+      "keys": [
+        ["zaman_utc", "timestamp_utc", "string (ISO-8601, UTC)", "when the run started; all rows of one run share this value, so it doubles as the run id"],
+        ["surum", "version", "string", "collector version that wrote the row (absent on the very first v0.1 rows)"],
+        ["uc", "endpoint", "string", "endpoint name, e.g. x402_discovery, github_repos"],
+        ["not", "note", "string", "free-text annotation about the endpoint's limits; rows written before 2026-08-18 carry Turkish text"],
+        ["ozet", "summary", "object", "the measurement itself; its shape depends on the endpoint"],
+        ["durum", "status", "string", "OK | HATA (error) | HTTP-HATA (http error) | HATA-ICERIDE (error inside the summary)"],
+        ["saniye", "duration_s", "number (seconds)", "wall-clock time this endpoint took"],
+        ["http", "http_status", "integer", "HTTP status code, only present when the request failed"],
+        ["hata", "error", "string", "Python exception repr, truncated; only present on failure"],
+        ["url", "url", "string", "endpoint URL (v0.1 rows only; later versions record it in `not`)"],
+        ["bayt", "bytes", "integer", "raw response size (v0.1 rows only); raw payloads are not stored"]
+      ]
+    },
+    {
+      "name": "Distribution summary",
+      "note": "Emitted by the shared `dagilim_ozeti` helper and reused wherever a distribution is archived (x402, Sherlock, Apify, Hugging Face, DeFiLlama). The distribution is the point: totals alone hide concentration.",
+      "keys": [
+        ["n", "n", "integer", "how many numeric values entered the distribution"],
+        ["toplam", "total", "number", "sum of all values"],
+        ["sifir_sayisi", "zero_count", "integer", "how many of the values were exactly 0"],
+        ["p10", "p10", "number", "10th percentile (nearest-rank, no interpolation)"],
+        ["p25", "p25", "number", "25th percentile"],
+        ["p50", "p50", "number", "median"],
+        ["p75", "p75", "number", "75th percentile"],
+        ["p90", "p90", "number", "90th percentile"],
+        ["p95", "p95", "number", "95th percentile"],
+        ["p99", "p99", "number", "99th percentile"],
+        ["maks", "max", "number", "largest single value"],
+        ["histogram", "histogram", "object", "bucket label -> count; bucket labels are data (see passthrough)"],
+        ["top1_pay", "top1_share", "number (0-1)", "share of the total held by the single largest value — the concentration measure"],
+        ["top10_pay", "top10_share", "number (0-1)", "share of the total held by the ten largest values"]
+      ]
+    },
+    {
+      "name": "Pagination and coverage",
+      "note": "Shared across the paginated endpoints. These exist so a reader can tell a real zero from an unmeasured one.",
+      "keys": [
+        ["sayfa", "pages_walked", "integer", "how many pages the collector actually fetched"],
+        ["sayfa_ogesi", "page_items", "integer", "how many items were collected across those pages"],
+        ["sayfa_alani", "pages_reported", "integer", "page count the API itself reported (Sherlock)"],
+        ["son_sayfa_alani", "last_page_reported", "integer", "last-page number the API reported (Code4rena)"],
+        ["taranan", "scanned", "integer", "how many items yielded a usable numeric value"],
+        ["kapsam_notu", "coverage_note", "string", "explicit statement of what this sample is and is not (e.g. upper tier, not a median)"],
+        ["olculemedi", "unmeasurable", "string (reason)", "PRESENT ONLY WHEN THE SCHEMA BROKE. If this key exists, the accompanying value is NOT zero — it is UNKNOWN. The collector refuses to silently count 0 when a response changes shape; it records why instead. Treat a row carrying `unmeasurable` as missing data, never as a measured zero."]
+      ]
+    },
+    {
+      "name": "Open-window watch",
+      "note": "Endpoints sherlock_contests, code4rena_audits (and cantina_competitions, implemented but not yet wired). Answers 'how many doors are open right now', which is a different question from 'how many exist'.",
+      "keys": [
+        ["yarisma_sayisi", "competition_count", "integer | null", "total competitions/audits the platform lists; null when unmeasurable"],
+        ["acik_yarisma", "open_count", "integer | null", "how many are open right now (end time in the future); null when unmeasurable"],
+        ["acik_kamu", "open_public_count", "integer | null", "of those, how many are open to the public (not private/invite-only)"],
+        ["acik_kapilar", "open_entries", "array", "the open ones themselves, soonest deadline first, capped at 10 per row to bound record size; the counts above are always exact"],
+        ["arena", "arena", "string", "which platform the entry came from: sherlock | code4rena | cantina"],
+        ["id", "id", "string | integer", "platform's own identifier for the entry"],
+        ["baslik", "title", "string", "entry title, truncated to 120 characters"],
+        ["kamu", "is_public", "boolean", "true when the entry is open to anyone rather than invite-only"],
+        ["biter_utc", "ends_utc", "string (ISO-8601, UTC)", "when the entry closes"],
+        ["kalan_gun", "days_left", "number (days)", "days remaining at the moment of measurement"],
+        ["odul", "prize", "string | number | null", "prize pool as the platform reports it (format varies by platform)"],
+        ["etiket", "label", "string", "platform's own category label, e.g. contest type or audit type"],
+        ["kyc", "kyc_required", "boolean | null", "whether the platform requires identity verification (Cantina only)"]
+      ]
+    },
+    {
+      "name": "x402 discovery",
+      "note": "Agent-payment resource registry. ROLLING 30-DAY WINDOW: the upstream keeps no history, so a week not captured is gone.",
+      "keys": [
+        ["kaynak_sayisi", "resource_count", "integer", "resources registered in the discovery index"],
+        ["cagri_30g", "calls_30d", "object (distribution)", "distribution of paid calls per resource over the last 30 days"],
+        ["odeyen_30g", "unique_payers_30d", "object (distribution)", "distribution of unique payers per resource over the last 30 days"],
+        ["top10_cagri", "top10_by_calls", "array", "the ten most-called resources"],
+        ["cagri", "calls", "integer", "call count for one resource (inside top10_by_calls)"],
+        ["kaynak", "resource", "string", "resource identifier, truncated to 120 characters"]
+      ]
+    },
+    {
+      "name": "Sherlock leaderboard",
+      "note": "Cumulative lifetime payouts per security researcher. There is no date parameter upstream — this is a running total, not a period figure.",
+      "keys": [
+        ["arastirmaci_sayisi", "researcher_count", "integer", "researchers listed on the leaderboard"],
+        ["odemeli_kayit", "records_with_payout", "integer", "how many of them have a numeric payout"],
+        ["omur_boyu_odeme", "lifetime_payout", "object (distribution)", "distribution of lifetime earnings in USD"],
+        ["top10", "top10", "array", "the ten largest entries (also used by Apify and Hugging Face)"],
+        ["handle", "handle", "string", "researcher handle"],
+        ["odeme", "payout", "number (USD)", "that researcher's lifetime payout"]
+      ]
+    },
+    {
+      "name": "DeFiLlama",
+      "note": "Two endpoints: the AI-Agents category cross-section, and the daily revenue series of the single largest protocol in it.",
+      "keys": [
+        ["ai_agent_protokol_sayisi", "ai_agent_protocol_count", "integer", "protocols DeFiLlama files under an AI-Agent category"],
+        ["toplam_protokol", "total_protocols", "integer", "protocols in the whole fees dataset, for context"],
+        ["ai_total24h", "ai_total_24h", "number (USD)", "summed 24h fee revenue across AI-agent protocols"],
+        ["ai_total24h_n", "ai_total_24h_n", "integer", "how many protocols contributed a number to that sum"],
+        ["ai_total7d", "ai_total_7d", "number (USD)", "summed 7-day fee revenue"],
+        ["ai_total7d_n", "ai_total_7d_n", "integer", "how many protocols contributed"],
+        ["ai_total30d", "ai_total_30d", "number (USD)", "summed 30-day fee revenue"],
+        ["ai_total30d_n", "ai_total_30d_n", "integer", "how many protocols contributed"],
+        ["ai_top5_30d", "ai_top5_30d", "array", "five largest AI-agent protocols by 30-day revenue"],
+        ["ad", "name", "string", "protocol name (inside ai_top5_30d)"],
+        ["usd30d", "usd_30d", "number (USD)", "that protocol's 30-day revenue"],
+        ["ai_30g_dagilim", "ai_30d_distribution", "object (distribution)", "distribution of 30-day revenue across AI-agent protocols — where concentration becomes visible"],
+        ["protokol", "protocol", "string", "the single protocol tracked in detail"],
+        ["gun_sayisi", "day_count", "integer", "days available in that protocol's daily series"],
+        ["total24h", "total_24h", "number (USD)", "protocol fee revenue, last 24h"],
+        ["total7d", "total_7d", "number (USD)", "protocol fee revenue, last 7 days"],
+        ["total30d", "total_30d", "number (USD)", "protocol fee revenue, last 30 days"],
+        ["totalAllTime", "total_all_time", "number (USD)", "protocol fee revenue, all time"],
+        ["ilk_gun_utc", "first_day_utc", "string (date)", "first day present in the daily series"],
+        ["son_gun_utc", "last_day_utc", "string (date)", "last day present in the daily series"],
+        ["son30g_dagilim", "last_30d_distribution", "object (distribution)", "distribution of the protocol's daily revenue over the last 30 days"]
+      ]
+    },
+    {
+      "name": "Apify store",
+      "note": "Published automation actors. SAMPLED: top 1,000 by popularity, which is an upper tier and explicitly not the store median.",
+      "keys": [
+        ["magaza_toplam_aktor", "store_total_actors", "integer", "total actors the store reports"],
+        ["toplam_kullanici_dagilimi", "total_users_distribution", "object (distribution)", "distribution of users per actor across the sample"],
+        ["aktor", "actor", "string", "actor identifier as username/name"],
+        ["kullanici", "users", "integer", "that actor's total users"]
+      ]
+    },
+    {
+      "name": "Hugging Face",
+      "note": "Top 100 models by download count. Downloads are cumulative and there is no official historical endpoint — this series is the archive.",
+      "keys": [
+        ["model_sayisi", "model_count", "integer", "models in the sample"],
+        ["indirme_dagilimi", "download_distribution", "object (distribution)", "distribution of cumulative downloads across the sample"],
+        ["indirme", "downloads", "integer", "that model's cumulative downloads"],
+        ["begeni", "likes", "integer", "that model's like count"]
+      ]
+    },
+    {
+      "name": "npm downloads",
+      "note": "Per-package download volume. The upstream clips the range to roughly 547 days, so old data falls off and must be archived.",
+      "keys": [
+        ["baslangic", "range_start", "string (date)", "first day of the returned range"],
+        ["bitis", "range_end", "string (date)", "last day of the returned range"],
+        ["gun", "day_count", "integer", "days returned in the range"],
+        ["toplam_30g", "downloads_30d", "integer", "downloads summed over the returned 30-day range"],
+        ["son_gun", "last_day", "object", "the final day's raw record, kept as a spot check"],
+        ["downloads", "downloads", "integer", "downloads on that day (upstream key, already English)"],
+        ["day", "day", "string (date)", "the day itself (upstream key, already English)"]
+      ]
+    },
+    {
+      "name": "PyPI downloads",
+      "note": "Per-package download volume excluding mirror traffic. The upstream window is roughly 362 days, so old data falls off.",
+      "keys": [
+        ["kayit", "records", "integer", "rows returned for the package"],
+        ["aynasiz_gun", "non_mirror_days", "integer", "rows in the without_mirrors category"],
+        ["ilk_tarih", "first_date", "string (date)", "earliest date in the returned window"],
+        ["son_tarih", "last_date", "string (date)", "latest date in the returned window"],
+        ["aynasiz_toplam", "non_mirror_total", "integer", "total non-mirror downloads across the window"],
+        ["aynasiz_son30g", "non_mirror_last_30d", "integer", "non-mirror downloads over the last 30 days of the window"]
+      ]
+    },
+    {
+      "name": "GitHub repositories",
+      "note": "Point-in-time snapshot of agent-framework repositories. GitHub exposes no historical star series here, so each run is one archived point.",
+      "keys": [
+        ["yildiz", "stars", "integer", "stargazer count"],
+        ["catal", "forks", "integer", "fork count"],
+        ["izleyen", "watchers", "integer", "subscriber/watcher count"],
+        ["acik_konu", "open_issues", "integer", "open issues (GitHub counts pull requests here too)"],
+        ["son_push", "last_push", "string (ISO-8601, UTC)", "most recent push to the default branch"]
+      ]
+    }
+  ]
+}
