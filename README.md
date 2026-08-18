@@ -46,7 +46,11 @@ audit platforms" should measure the *cadence of open windows*, not the existence
 - Runs weekly (Mondays, 07:00 UTC) plus an **independent daily freshness watchdog** — because a
   collector that silently returns zero is worse than one that visibly fails
 - Each record carries `zaman_utc`, `uc` (endpoint), `ozet` (summary), `durum` (status), `saniye` (duration)
-- Series is **OpenTimestamps-anchored** so that "we measured this on that date" is verifiable, not asserted
+- Series is **OpenTimestamps-stamped** (`ai-arz-serisi.ndjson.ots`) so that "we measured this on that date"
+  is verifiable, not asserted. **Honest status:** the stamp is submitted to calendar servers; Bitcoin
+  anchoring takes hours, so `ots verify` reads *pending* until a block confirms it. Also: the series is
+  append-only, so each stamp covers the file **as of that commit** — earlier stamps do not validate later
+  files. Archived point-in-time snapshots with their own stamps are kept under `arsiv/` upstream.
 
 ### Known limits (stated, not hidden)
 
