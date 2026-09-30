@@ -58,6 +58,7 @@ already contains.
   anchoring takes hours, so `ots verify` reads *pending* until a block confirms it. Also: the series is
   append-only, so each stamp covers the file **as of that commit** — earlier stamps do not validate later
   files. Archived point-in-time snapshots with their own stamps are kept under `archive/` upstream.
+- A dated, append-only [**evidence record**](record/) of what this system measured about itself — negatives mandatory, entries never edited
 
 ### The silent-zero brake
 
