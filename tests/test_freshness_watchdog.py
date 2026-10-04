@@ -650,3 +650,47 @@ class TestCode4renaGuarded:
               and x.get("zaman_utc", "") <= "2026-09-28T23:59:59"]
         assert len(ok) == w.C4_TURETME_KOSU
         assert min(x["ozet"]["yarisma_sayisi"] for x in ok) > 0
+
+
+# ── missing and malformed input on the less common paths ────────────────────
+class TestMalformedInputPaths:
+    def test_file_mtime_is_none_when_the_file_cannot_be_stat_after_reading(self, tmp_path, monkeypatch):
+        yol = saglikli(tmp_path)
+        P = type(yol)
+        gercek_stat, gercek_oku, okundu = P.stat, P.read_text, []
+
+        def read_text(self, *a, **k):
+            okundu.append(self)
+            return gercek_oku(self, *a, **k)
+
+        def stat(self, *a, **k):
+            if self == yol and okundu:                # the file vanishes once it has been read
+                raise FileNotFoundError(str(self))
+            return gercek_stat(self, *a, **k)
+        monkeypatch.setattr(P, "read_text", read_text)
+        monkeypatch.setattr(P, "stat", stat)
+        kod, r = w.denetle(yol, SIMDI)
+        assert r["file_mtime_age_days"] is None
+        assert kod == YESIL and r["record_age_days"] == pytest.approx(1.0)
+
+    def test_unparseable_stamps_give_no_frozen_finding(self, tmp_path):
+        s = kosu("bozuk-1", w._SAGLAM) + kosu("bozuk-2", w._SAGLAM) + kosu("bozuk-3", w._SAGLAM)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI
+        assert r["consecutive_identical"]["hf_models"] == 3
+        assert not any("FROZEN" in b for b in r["findings"])
+        assert any("UNREADABLE" in b for b in r["findings"])
+
+    def test_kaydir_leaves_non_numeric_values_unchanged(self):
+        o = {"a": {"n": 1, "ad": "x", "alt": {"m": 2, "etiket": "y", "liste": [1]}}}
+        assert w._kaydir(o, 5) == {"a": {"n": 6, "ad": "x", "alt": {"m": 7, "etiket": "y", "liste": [1]}}}
+        assert o["a"]["n"] == 1                       # the input is not modified
+
+    def test_script_entry_point_prints_help(self, monkeypatch, capsys):
+        import runpy
+        monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--help"])
+        with pytest.raises(SystemExit) as e:
+            runpy.run_path(w.__file__, run_name="__main__")
+        assert e.value.code == 0
+        out = capsys.readouterr().out
+        assert out.startswith("usage: freshness_watchdog.py") and "--series" in out
