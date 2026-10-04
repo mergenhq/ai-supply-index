@@ -26,7 +26,7 @@ RC_COLLECT=$?
 say "STEP-1 rc=$RC_COLLECT"
 
 # newest snapshot published before this run: the audit checks the series still begins with it
-PREVIOUS="$(ls "$ARCHIVE"/ai-arz-serisi-*.ndjson 2>/dev/null | sort | tail -n 1)"
+PREVIOUS="$(find "$ARCHIVE" -maxdepth 1 -name 'ai-arz-serisi-*.ndjson' 2>/dev/null | sort | tail -n 1)"
 
 say "=== STEP-2 STAMP (frozen snapshot) ==="
 # 0 = every endpoint OK, 3 = some endpoints OK: both are stamped; 1 = none OK

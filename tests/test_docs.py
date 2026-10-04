@@ -127,3 +127,32 @@ def test_licence_files_name_existing_files_and_cover_the_published_data():
     veri = (KOK / "LICENSE-DATA").read_text(encoding="utf-8")
     for gerekli in ("ai-arz-serisi.ndjson", "series-en.ndjson", "archive/", "*.ots"):
         assert gerekli in veri, gerekli
+
+
+# ── repository hygiene checked in CI ────────────────────────────────────────
+def test_readme_schema_section_is_the_generated_one():
+    import to_english as te
+    a = README.index("## Schema\n\n") + len("## Schema\n\n")
+    b = README.index("### Why the keys stay Turkish")
+    assert README[a:b] == te.sema_md() + "\n"
+
+
+def test_english_mirror_is_up_to_date(tmp_path, capsys):
+    import to_english as te
+    meta, keys = te.harita_yukle()
+    cikti = tmp_path / "en.ndjson"
+    te.ingilizce_yaz(KOK / "ai-arz-serisi.ndjson", cikti, keys, meta)
+    assert cikti.read_bytes() == (KOK / "series-en.ndjson").read_bytes()
+
+
+def test_scripts_with_a_shebang_are_executable():
+    import os
+    for ad in ("collector.py", "freshness_watchdog.py", "to_english.py", "run_weekly.sh"):
+        assert os.access(KOK / ad, os.X_OK), ad
+
+
+def test_ci_workflow_runs_the_suite_and_the_self_tests():
+    wf = (KOK / ".github" / "workflows" / "tests.yml").read_text(encoding="utf-8")
+    for adim in ("python -m pytest", "freshness_watchdog.py --self-test", "to_english.py --self-test",
+                 "shellcheck run_weekly.sh"):
+        assert adim in wf, adim
