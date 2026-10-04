@@ -117,3 +117,13 @@ def test_note_description_names_the_last_turkish_run():
 def test_url_description_covers_open_entries():
     assert "open entr" in aciklama("url")
     assert "later versions record it in" not in aciklama("url")
+
+
+def test_licence_files_name_existing_files_and_cover_the_published_data():
+    for ad in ("LICENSE-DATA", "LICENSE"):
+        metin = (KOK / ad).read_text(encoding="utf-8")
+        for dosya in re.findall(r"`([^`]+\.(?:py|sh|json|ndjson))`", metin):
+            assert list(KOK.glob(dosya)), "%s names a missing file: %s" % (ad, dosya)
+    veri = (KOK / "LICENSE-DATA").read_text(encoding="utf-8")
+    for gerekli in ("ai-arz-serisi.ndjson", "series-en.ndjson", "archive/", "*.ots"):
+        assert gerekli in veri, gerekli

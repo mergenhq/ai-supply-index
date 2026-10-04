@@ -366,8 +366,8 @@ the AI economy is itself a conflict worth naming.
 
 | what | licence | file |
 |---|---|---|
-| **Data** — `ai-arz-serisi.ndjson`, `series-en.ndjson`, `*.ots`, tables in this README | **CC BY 4.0** | `LICENSE-DATA` |
-| **Code** — `collector.py`, `freshness_watchdog.py`, `run_weekly.sh`, `to_english.py`, `schema_map.json` | **MIT** | `LICENSE` |
+| **Data** — `ai-arz-serisi.ndjson`, `series-en.ndjson`, `archive/`, `*.ots`, tables in this README | **CC BY 4.0** | `LICENSE-DATA` |
+| **Code** — `collector.py`, `freshness_watchdog.py`, `run_weekly.sh`, `to_english.py`, `schema_map.json`, `tests/` | **MIT** | `LICENSE` |
 
 Use the data freely, including commercially — attribution is the only condition.
 
