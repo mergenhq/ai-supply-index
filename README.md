@@ -50,8 +50,11 @@ already contains.
 - **11 endpoints**, all public, **no authentication, no account, no scraping of gated content**
 - One run ≈ **85 seconds** for all 11 endpoints, cost **$0** (measured 2026-08-18)
 - Every run appends one line per endpoint to `ai-arz-serisi.ndjson` (JSON Lines, append-only)
-- Runs **weekly, Mondays 07:00 UTC**, plus an **independent daily freshness watchdog at 07:30 UTC** —
-  because a collector that silently returns zero is worse than one that visibly fails
+- Runs **twice a week, Mondays and Thursdays 07:00 UTC**, plus an **independent daily freshness watchdog
+  at 07:30 UTC** — because a collector that silently returns zero is worse than one that visibly fails.
+  The series also holds the set-up runs of 2026-08-18 to 2026-08-21 (up to six a day), and from 2026-08-20
+  to 2026-09-14 a second collector ran at about 06:30 UTC, so those days carry two runs. Rows written by a
+  collector that sets `AI_ARZ_TOPLAYICI` carry its name in `toplayici` (`collector_id`).
 - Record structure is documented key by key in [**Schema**](#schema) below
 - Each publication is **OpenTimestamps-stamped**: the series is copied to a frozen, dated snapshot under
   [`archive/`](archive/) and that snapshot is stamped next to it (`archive/ai-arz-serisi-<UTC stamp>.ndjson.ots`),
@@ -101,6 +104,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `hata` | `error` | string | Python exception repr, truncated; only present on failure |
 | `url` | `url` | string | endpoint URL (v0.1 rows only; later versions record it in `not`) |
 | `bayt` | `bytes` | integer | raw response size (v0.1 rows only); raw payloads are not stored |
+| `toplayici` | `collector_id` | string | which collector host wrote the row (the AI_ARZ_TOPLAYICI setting, at most 40 characters); absent when not set |
 
 #### Distribution summary
 

@@ -265,3 +265,9 @@ def test_open_window_summary_keys_are_all_mapped():
     te.cevir({"zaman_utc": "t", "uc": "sherlock_contests", "ozet": ozet}, "sherlock_contests",
              [], keys, meta, eksik)
     assert eksik == []
+
+
+def test_envelope_keys_written_by_the_collector_are_mapped():
+    _, keys = te.harita_yukle()
+    for k in ("zaman_utc", "surum", "uc", "not", "ozet", "durum", "saniye", "http", "hata", "toplayici"):
+        assert k in keys, k
