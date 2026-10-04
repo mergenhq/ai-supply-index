@@ -374,3 +374,70 @@ class TestMain:
         monkeypatch.setattr(w.tempfile, "mkdtemp", lambda **k: str(tmp_path))
         assert self.calistir(monkeypatch, ["--self-test"]) == 0
         assert "10 passed / 0 failed" in capsys.readouterr().out
+
+
+# ── regressions for the two verified bugs ───────────────────────────────────
+class TestH1NonObjectRows:
+    """H1: a line that is valid JSON but not an object (e.g. a bare `42`) crashed denetle()
+    with AttributeError. Expected: skipped, counted in the report, no crash."""
+
+    @pytest.mark.parametrize("bozuk", ["42", '"metin"', "[1, 2]", "null", "true"])
+    def test_non_object_row_is_skipped_and_counted(self, tmp_path, bozuk):
+        kod, r = w.denetle(saglikli(tmp_path, extra=[bozuk]), SIMDI)
+        assert kod == YESIL
+        assert r["record_count"] == 30
+        assert r["skipped_non_object_rows"] == 1
+        assert any("1 non-object row" in b for b in r["findings"])
+
+    def test_several_rows_mid_series(self, tmp_path):
+        s = (kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + ["42"]
+             + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + ["[]", "null"] + kosu(ts(1), w._SAGLAM))
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == YESIL and r["skipped_non_object_rows"] == 3
+
+    def test_skip_does_not_mask_a_real_alarm(self, tmp_path):
+        o = dict(w._SAGLAM, hf_models={"model_sayisi": 0})
+        kod, r = w.denetle(seri(tmp_path, kosu(ts(1), o) + ["42"]), SIMDI)
+        assert kod == KIRMIZI and r["skipped_non_object_rows"] == 1
+
+    def test_only_non_object_rows_is_red_empty(self, tmp_path):
+        kod, r = w.denetle(seri(tmp_path, ["42", "[1]"]), SIMDI)
+        assert kod == KIRMIZI
+        assert r["record_count"] == 0 and r["skipped_non_object_rows"] == 2
+
+    def test_clean_series_reports_zero_skipped(self, tmp_path):
+        kod, r = w.denetle(saglikli(tmp_path), SIMDI)
+        assert r["skipped_non_object_rows"] == 0
+        assert not any("non-object" in b for b in r["findings"])
+
+
+class TestH2DistinctEndpoints:
+    """H2: the last run's endpoint count was len(records), so a dropped endpoint hidden by a
+    duplicate of another one read as 10/10 GREEN. Expected: distinct endpoint names count."""
+
+    def test_dropped_endpoint_masked_by_duplicate_is_red(self, tmp_path):
+        o = {k: v for k, v in w._SAGLAM.items() if k != "hf_models"}
+        s = kosu(ts(1), o) + kosu(ts(1), {"github_repos": w._SAGLAM["github_repos"]})
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI
+        assert r["last_run_endpoint_count"] == 9
+        b = [x for x in r["findings"] if "MISSING-ENDPOINT" in x]
+        assert b and "9/10" in b[0] and "dropped=hf_models" in b[0]
+
+    def test_dropped_endpoint_masked_by_untracked_endpoint_is_red(self, tmp_path):
+        # the real collector writes 11 rows per run (code4rena_audits is not a tracked carrier)
+        o = {k: v for k, v in w._SAGLAM.items() if k != "apify_store"}
+        s = kosu(ts(1), o) + [satir(ts(1), "code4rena_audits", {"yarisma_sayisi": 475})]
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI
+        assert any("dropped=apify_store" in b for b in r["findings"])
+
+    def test_duplicates_with_all_endpoints_present_stay_green(self, tmp_path):
+        extra = kosu(ts(1), {"github_repos": w._SAGLAM["github_repos"]})
+        kod, r = w.denetle(saglikli(tmp_path, extra=extra), SIMDI)
+        assert kod == YESIL and r["last_run_endpoint_count"] == 10
+
+    def test_real_shaped_run_with_eleven_rows_is_10_of_10(self, tmp_path):
+        extra = [satir(ts(1), "code4rena_audits", {"yarisma_sayisi": 475})]
+        kod, r = w.denetle(saglikli(tmp_path, extra=extra), SIMDI)
+        assert kod == YESIL and r["last_run_endpoint_count"] == 10

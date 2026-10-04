@@ -140,10 +140,17 @@ def denetle(seri: Path, simdi=None):
          "findings": [], "severity": "GREEN"}
     kirmizi, sari = [], []
 
-    rows = kayitlar(seri)
+    # a line that is valid JSON but not an object (e.g. a bare `42`) cannot be a record:
+    # skip it and report how many were skipped, instead of crashing on x.get()
+    ham = kayitlar(seri)
+    rows = [x for x in ham if isinstance(x, dict)]
+    atlanan = len(ham) - len(rows)
     r["record_count"] = len(rows)
+    r["skipped_non_object_rows"] = atlanan
+    notlar = ["NOTE skipped %d non-object row(s) in the series" % atlanan] if atlanan else []
     if not rows:
         r["findings"].append("RED series is EMPTY or MISSING: %s" % seri)
+        r["findings"] += notlar
         r["severity"] = "RED"
         return 2, r
 
@@ -172,13 +179,16 @@ def denetle(seri: Path, simdi=None):
 
     # ── records belonging to the last run ───────────────────────────────────
     son_kosu = [x for x in rows if x.get("zaman_utc") == son_damga]
-    r["last_run_endpoint_count"] = len(son_kosu)
+    # count DISTINCT expected endpoint names, not records: a duplicated row or an extra,
+    # untracked endpoint (e.g. code4rena_audits) must not hide one that dropped
+    son_ucler = {x.get("uc") for x in son_kosu} & set(TASIYICILAR)
+    r["last_run_endpoint_count"] = len(son_ucler)
 
     # ── (+) MISSING ENDPOINT ────────────────────────────────────────────────
-    if len(son_kosu) < KAYITLI_UC:
-        eksikler = sorted(set(TASIYICILAR) - {x.get("uc") for x in son_kosu})
+    if len(son_ucler) < KAYITLI_UC:
+        eksikler = sorted(set(TASIYICILAR) - son_ucler)
         kirmizi.append("MISSING-ENDPOINT: last run has %d/%d endpoints; dropped=%s"
-                       % (len(son_kosu), KAYITLI_UC, ",".join(eksikler) or "?"))
+                       % (len(son_ucler), KAYITLI_UC, ",".join(eksikler) or "?"))
 
     # ── (2) ZERO/NONE + status ──────────────────────────────────────────────
     tasiyici_son = {}
@@ -230,7 +240,7 @@ def denetle(seri: Path, simdi=None):
                         % (uc, dizi[0], n, yayilim, DONMUS_ESIK, DONMUS_MIN_YAYILIM_GUN))
     r["consecutive_identical"] = donmus
 
-    r["findings"] = ["RED " + x for x in kirmizi] + ["YELLOW " + x for x in sari]
+    r["findings"] = ["RED " + x for x in kirmizi] + ["YELLOW " + x for x in sari] + notlar
     if kirmizi:
         r["severity"] = "RED"
         return 2, r
