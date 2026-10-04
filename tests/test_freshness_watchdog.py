@@ -247,7 +247,7 @@ class TestDenetle:
         assert any("ENDPOINT-ERROR: hf_models" in b for b in r["findings"])
 
     def test_red_beats_yellow(self, tmp_path):
-        o = dict(w._SAGLAM, hf_models={"model_sayisi": 0})
+        o = dict(w._SAGLAM, hf_models={"indirme_dagilimi": {"toplam": 0}})
         kod, r = w.denetle(seri(tmp_path, kosu(ts(10), o)), SIMDI)
         assert kod == KIRMIZI
         assert any(b.startswith("RED") for b in r["findings"])
@@ -396,7 +396,7 @@ class TestH1NonObjectRows:
         assert kod == YESIL and r["skipped_non_object_rows"] == 3
 
     def test_skip_does_not_mask_a_real_alarm(self, tmp_path):
-        o = dict(w._SAGLAM, hf_models={"model_sayisi": 0})
+        o = dict(w._SAGLAM, hf_models={"indirme_dagilimi": {"toplam": 0}})
         kod, r = w.denetle(seri(tmp_path, kosu(ts(1), o) + ["42"]), SIMDI)
         assert kod == KIRMIZI and r["skipped_non_object_rows"] == 1
 
@@ -556,3 +556,26 @@ class TestUnmeasurable:
         s = kosu(ts(15), eski) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), w._SAGLAM)
         kod, r = w.denetle(seri(tmp_path, s), SIMDI)
         assert kod == YESIL, r["findings"]
+
+
+class TestCarrierChoice:
+    def test_hf_carrier_is_total_downloads(self):
+        assert w.TASIYICILAR["hf_models"]({"model_sayisi": 100, "indirme_dagilimi": {"toplam": 5.0}}) == 5.0
+
+    def test_defillama_category_carrier_is_30d_total(self):
+        assert w.TASIYICILAR["defillama_fees_ai_agents"](
+            {"ai_agent_protokol_sayisi": 17, "ai_total30d": 9.5}) == 9.5
+
+    def test_real_series_has_no_frozen_finding_for_moving_carriers(self):
+        from conftest import KOK
+        _, r = w.denetle(KOK / "ai-arz-serisi.ndjson", SIMDI + timedelta(days=41), onceki=None)
+        donmus = [b for b in r["findings"] if "FROZEN" in b]
+        for uc in ("hf_models", "defillama_fees_ai_agents", "x402_discovery", "apify_store",
+                   "defillama_summary_virtuals", "npm_downloads", "pypi_downloads", "github_repos"):
+            assert not any(uc in b for b in donmus), donmus
+
+    def test_frozen_message_states_the_derivation(self, tmp_path):
+        s = kosu(ts(15), w._SAGLAM) + kosu(ts(8), w._SAGLAM) + kosu(ts(1), w._SAGLAM)
+        _, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert all("calibration debt" not in b for b in r["findings"])
+        assert any("derived from %d runs" % w.DONMUS_TURETME_KOSU in b for b in r["findings"])

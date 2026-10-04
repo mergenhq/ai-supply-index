@@ -333,9 +333,9 @@ carry the meaning.
    start high.
 6. **The watchdog currently guards 10 of the 11 endpoints.** `code4rena_audits` was added to the collector
    after the watchdog's thresholds were derived, and its load-bearing number is not yet in the watchdog's
-   table. A silent zero on that one endpoint would not be caught today. Stated here rather than fixed
-   quietly, because the thresholds are supposed to be re-derived from measurement, not guessed — that
-   happens once ~6 runs have accumulated.
+   table, so a silent zero there is not caught by the zero check (a reported `olculemedi` is). The frozen
+   thresholds and carriers were re-derived from the 28 runs up to 2026-09-28; the Hugging Face and DeFiLlama
+   category carriers are now the summed downloads and the summed 30-day fees, which move with every run.
 7. **`cantina_competitions` is implemented and measured but not yet wired in.** It is present in
    `collector.py` and deliberately absent from the active endpoint list, so it produces no rows.
 8. **One reordering in the first week.** When the rows of the second collector were merged on 2026-08-24,
