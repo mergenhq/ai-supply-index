@@ -5,7 +5,7 @@
     "source_of_truth": "This file. The Schema table in README.md is generated from it via `python3 to_english.py --schema-md`.",
     "schema_version": "0.3",
     "generated_for_collector_version": "0.3",
-    "key_count": 105
+    "key_count": 106
   },
 
   "passthrough": {
@@ -35,7 +35,8 @@
         ["http", "http_status", "integer", "HTTP status code, only present when the request failed"],
         ["hata", "error", "string", "Python exception repr, truncated; only present on failure"],
         ["url", "url", "string", "endpoint URL (v0.1 rows only; later versions record it in `not`)"],
-        ["bayt", "bytes", "integer", "raw response size (v0.1 rows only); raw payloads are not stored"]
+        ["bayt", "bytes", "integer", "raw response size (v0.1 rows only); raw payloads are not stored"],
+        ["toplayici", "collector_id", "string", "which collector host wrote the row (the AI_ARZ_TOPLAYICI setting, at most 40 characters); absent when not set"]
       ]
     },
     {

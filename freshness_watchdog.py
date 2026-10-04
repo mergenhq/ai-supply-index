@@ -11,12 +11,15 @@ INDEPENDENT FAULT CLASSES ARE MEASURED (none of them can see the others):
   (1) STALENESS  — age of the last RECORD stamp (NOT the file mtime: a touched-but-unwritten
                    file produces a fake green; both are reported, the verdict uses the RECORD)
   (2) ZERO/NONE  — is any endpoint's load-bearing number 0/None/missing in the last run
-                   (= the schema broke)
+                   (= the schema broke), or does any summary of the last run carry the
+                   collector's own `olculemedi` (unmeasurable) reason
   (3) FROZEN     — how many consecutive runs returned the identical value (endpoint alive
                    but repeating itself)
   (+) MISSING    — does the last run carry fewer endpoints than expected (one dropped silently)
   (4) STALE-SOURCE — on the open-window endpoints, did even the newest listed entry start
                    more than KAYNAK_ESKI_GUN days ago (the listing may no longer be updated)
+  (6) PARTIAL/DROP — a per-package error inside the last run's summary (red), or a
+                   load-bearing number that fell by more than DUSUS_ORANI in one run (yellow)
   (5) APPEND-ONLY — does the series still begin, byte for byte, with the newest snapshot
                    under archive/ (no row changed, removed or reordered)
 
@@ -60,13 +63,18 @@ VARSAYILAN_SERI = KOK / "ai-arz-serisi.ndjson"
 TAZELIK_SARI_GUN = 8
 TAZELIK_KIRMIZI_GUN = 14
 
-# FROZEN threshold: with n=2 runs a STATISTICAL calibration is IMPOSSIBLE [stated].
-# Starting value is 3 consecutive-identical (~3 weeks) and deliberately YELLOW (not RED):
-# slow-moving counters (sherlock_contests=301, ai_agent_protokol_sayisi=17) can legitimately
-# stay flat FOR WEEKS => an automatic RED would manufacture a fake red.
-# RE-DERIVATION DEBT: once 6 runs (~6 weeks) have accumulated, re-measure this from the series.
+# FROZEN threshold. RE-DERIVED [series up to 2026-09-28, 28 runs, 41 days]:
+#   - carriers that move with every run (x402, Apify, DeFiLlama 30-day totals, Hugging Face
+#     downloads, npm, PyPI, GitHub stars) were never identical for longer than 0.9 days;
+#   - the slow counters were flat for long stretches: sherlock_leaderboard 25 days,
+#     sherlock_contests 41 days, the AI-agent protocol count 21 days, model_sayisi 41 days
+#     (it is the request limit, 100). The last two are no longer carriers (see TASIYICILAR).
+# So 3 identical runs spread over >= 10 days never fires on a moving carrier in the measured
+# series, and still fires on the Sherlock counters — which is the case a human should look at.
+# Kept YELLOW (not RED): a slow counter can legitimately stay flat for weeks.
 DONMUS_ESIK = 3
-DONMUS_YENIDEN_TURET_KOSU = 6
+DONMUS_TURETME_KOSU = 28
+DONMUS_TURETME_TARIHI = "2026-09-28"
 
 # FROZEN also carries a TIME-SPREAD condition. ROOT CAUSE [found by live measurement
 # 2026-08-18T15:05Z]: on the first VPS run the series held 3 runs on the SAME DAY (07:04,
@@ -79,6 +87,12 @@ DONMUS_MIN_YAYILIM_GUN = 10
 
 KAYITLI_UC = 10
 
+# DROP: a load-bearing number that falls by more than half between two consecutive runs.
+# MEASURED [series up to 2026-09-28, OK rows without per-package errors]: the largest
+# one-run fall of any load-bearing number was 22.4 % (defillama_summary_virtuals total30d);
+# every fall past 50 % came from a run with packages missing.
+DUSUS_ORANI = 0.5
+
 # SOURCE FRESHNESS for the open-window endpoints: `en_yeni_baslangic_utc` is the start time
 # of the newest entry the platform lists. If even the newest entry started this long ago,
 # the listing itself may no longer be updated, and "0 open" would describe the listing,
@@ -86,7 +100,7 @@ KAYITLI_UC = 10
 KAYNAK_ESKI_GUN = 90
 
 # LOAD-BEARING NUMBER — the single value that decides whether an endpoint's row is full or empty.
-# All were MEASURED from the 2026-08-18 run; none of them was 0 (the smallest was 17), so a
+# None of them has been 0 in any OK row of the series (2026-08-18 .. 2026-09-28), so a
 # 0/None here means the schema broke (there is no legitimate-zero scenario).
 def _topla(ozet, alan):
     """Sum `alan` across nested dicts (npm/pypi/github carry a per-package sub-dict)."""
@@ -108,10 +122,10 @@ TASIYICILAR = {
     "x402_discovery":             lambda o: _duz(o, "kaynak_sayisi"),
     "sherlock_leaderboard":       lambda o: _duz(o, "arastirmaci_sayisi"),
     "sherlock_contests":          lambda o: _duz(o, "yarisma_sayisi"),
-    "defillama_fees_ai_agents":   lambda o: _duz(o, "ai_agent_protokol_sayisi"),
+    "defillama_fees_ai_agents":   lambda o: _duz(o, "ai_total30d"),
     "defillama_summary_virtuals": lambda o: _duz(o, "total30d"),
     "apify_store":                lambda o: _duz(o, "magaza_toplam_aktor"),
-    "hf_models":                  lambda o: _duz(o, "model_sayisi"),
+    "hf_models":                  lambda o: _duz(_duz(o, "indirme_dagilimi"), "toplam"),
     "npm_downloads":              lambda o: _topla(o, "toplam_30g"),
     "pypi_downloads":             lambda o: _topla(o, "aynasiz_toplam"),
     "github_repos":               lambda o: _topla(o, "yildiz"),
@@ -222,6 +236,14 @@ def denetle(seri: Path, simdi=None, onceki=None):
         durum = k.get("durum")
         if durum and durum != "OK":
             kirmizi.append("ENDPOINT-ERROR: %s status=%s" % (uc, durum))
+        oz = k.get("ozet")
+        if isinstance(oz, dict) and oz.get("olculemedi"):
+            kirmizi.append("UNMEASURABLE: %s — %s" % (uc, str(oz["olculemedi"])[:200]))
+        if isinstance(oz, dict):
+            eksik_paket = sorted(p for p, v in oz.items() if isinstance(v, dict) and v.get("hata"))
+            if eksik_paket:
+                kirmizi.append("PARTIAL: %s has errors inside the summary for %s"
+                               % (uc, ",".join(eksik_paket)))
         cikar = TASIYICILAR.get(uc)
         if cikar is None:
             continue
@@ -231,7 +253,7 @@ def denetle(seri: Path, simdi=None, onceki=None):
             kirmizi.append("SILENT-NONE: %s has no load-bearing number (schema broke)" % uc)
         elif deger == 0:
             kirmizi.append("SILENT-ZERO: %s load-bearing number is 0 (schema broke; "
-                           "in the 2026-08-18 measurement the smallest was 17)" % uc)
+                           "no carrier has been 0 in any OK row of the series)" % uc)
     r["last_run_carriers"] = tasiyici_son
 
     # ── (4) SOURCE FRESHNESS (open-window endpoints) ───────────────────────
@@ -261,6 +283,11 @@ def denetle(seri: Path, simdi=None, onceki=None):
                 break
         if len(dizi) >= 2:
             donmus[uc] = n
+            yeni, eski = dizi[0], dizi[1]
+            if (isinstance(yeni, (int, float)) and isinstance(eski, (int, float)) and eski > 0
+                    and yeni < eski * (1 - DUSUS_ORANI)):
+                sari.append("DROP: %s load-bearing number fell from %s to %s (more than %d %% in one run)"
+                            % (uc, eski, yeni, DUSUS_ORANI * 100))
         # TIME-SPREAD condition: same-day repeats are NOT frozen-ness (fake-red brake)
         yayilim = 0.0
         if n >= 2:
@@ -270,8 +297,9 @@ def denetle(seri: Path, simdi=None, onceki=None):
                 yayilim = y - e
         if n >= DONMUS_ESIK and yayilim >= DONMUS_MIN_YAYILIM_GUN:
             sari.append("FROZEN: %s returned the same value (%s) for the last %d runs, spread over "
-                        "%.1f days; thresholds=%d runs & %d days [n=2 calibration debt outstanding]"
-                        % (uc, dizi[0], n, yayilim, DONMUS_ESIK, DONMUS_MIN_YAYILIM_GUN))
+                        "%.1f days; thresholds=%d runs & %d days (derived from %d runs, %s)"
+                        % (uc, dizi[0], n, yayilim, DONMUS_ESIK, DONMUS_MIN_YAYILIM_GUN,
+                           DONMUS_TURETME_KOSU, DONMUS_TURETME_TARIHI))
     r["consecutive_identical"] = donmus
 
     r["findings"] = ["RED " + x for x in kirmizi] + ["YELLOW " + x for x in sari] + notlar
@@ -312,9 +340,9 @@ def _satir(ts, uc, ozet, durum="OK"):
 
 _SAGLAM = {
     "x402_discovery": {"kaynak_sayisi": 15095}, "sherlock_leaderboard": {"arastirmaci_sayisi": 1710},
-    "sherlock_contests": {"yarisma_sayisi": 301}, "defillama_fees_ai_agents": {"ai_agent_protokol_sayisi": 17},
+    "sherlock_contests": {"yarisma_sayisi": 301}, "defillama_fees_ai_agents": {"ai_total30d": 1177308.67},
     "defillama_summary_virtuals": {"total30d": 1055670}, "apify_store": {"magaza_toplam_aktor": 47744},
-    "hf_models": {"model_sayisi": 100}, "npm_downloads": {"pkg": {"toplam_30g": 115914002}},
+    "hf_models": {"indirme_dagilimi": {"toplam": 1580224158}}, "npm_downloads": {"pkg": {"toplam_30g": 115914002}},
     "pypi_downloads": {"anthropic": {"aynasiz_toplam": 802816271}},
     "github_repos": {"lc/lc": {"yildiz": 144448}},
 }

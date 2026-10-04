@@ -532,3 +532,47 @@ class TestNewestStart:
     def test_no_start_times_is_none(self, ag):
         ag({"contests": {"items": [{"id": 1, "ends_at": SIMDI_EP - GUN}], "total": 1}})
         assert c.uc_sherlock_contests()["en_yeni_baslangic_utc"] is None
+
+
+class TestCollectorId:
+    """Rows carry `toplayici` when AI_ARZ_TOPLAYICI is set, so two collectors can be told apart."""
+    def kur(self, monkeypatch, tmp_path):
+        seri = tmp_path / "seri.ndjson"
+        monkeypatch.setattr(c, "SERI", seri)
+        monkeypatch.setattr(c, "UCLAR", [("a", lambda: {"n": 1}, "")])
+        return seri
+
+    def test_set(self, monkeypatch, tmp_path, capsys):
+        seri = self.kur(monkeypatch, tmp_path)
+        monkeypatch.setenv("AI_ARZ_TOPLAYICI", "vps-1")
+        c.main()
+        assert json.loads(seri.read_text(encoding="utf-8"))["toplayici"] == "vps-1"
+
+    @pytest.mark.parametrize("deger", [None, "", "   "])
+    def test_unset_or_blank_is_absent(self, monkeypatch, tmp_path, capsys, deger):
+        seri = self.kur(monkeypatch, tmp_path)
+        if deger is None:
+            monkeypatch.delenv("AI_ARZ_TOPLAYICI", raising=False)
+        else:
+            monkeypatch.setenv("AI_ARZ_TOPLAYICI", deger)
+        c.main()
+        assert "toplayici" not in json.loads(seri.read_text(encoding="utf-8"))
+
+    def test_truncated(self, monkeypatch, tmp_path, capsys):
+        seri = self.kur(monkeypatch, tmp_path)
+        monkeypatch.setenv("AI_ARZ_TOPLAYICI", "x" * 100)
+        c.main()
+        assert len(json.loads(seri.read_text(encoding="utf-8"))["toplayici"]) == 40
+
+
+class TestNestedErrorStatus:
+    """A per-package error inside the summary makes the row HATA-ICERIDE, not OK."""
+    def test_nested_package_error(self, monkeypatch, tmp_path, capsys):
+        seri = tmp_path / "seri.ndjson"
+        monkeypatch.setattr(c, "SERI", seri)
+        monkeypatch.setattr(c, "UCLAR", [
+            ("paket", lambda: {"a": {"toplam_30g": 5}, "b": {"hata": "HTTPError 429"}}, ""),
+            ("temiz", lambda: {"a": {"toplam_30g": 5}}, "")])
+        assert c.main() == 0
+        r = {json.loads(x)["uc"]: json.loads(x) for x in seri.read_text(encoding="utf-8").splitlines()}
+        assert r["paket"]["durum"] == "HATA-ICERIDE" and r["temiz"]["durum"] == "OK"

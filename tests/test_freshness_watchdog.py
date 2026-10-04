@@ -247,7 +247,7 @@ class TestDenetle:
         assert any("ENDPOINT-ERROR: hf_models" in b for b in r["findings"])
 
     def test_red_beats_yellow(self, tmp_path):
-        o = dict(w._SAGLAM, hf_models={"model_sayisi": 0})
+        o = dict(w._SAGLAM, hf_models={"indirme_dagilimi": {"toplam": 0}})
         kod, r = w.denetle(seri(tmp_path, kosu(ts(10), o)), SIMDI)
         assert kod == KIRMIZI
         assert any(b.startswith("RED") for b in r["findings"])
@@ -396,7 +396,7 @@ class TestH1NonObjectRows:
         assert kod == YESIL and r["skipped_non_object_rows"] == 3
 
     def test_skip_does_not_mask_a_real_alarm(self, tmp_path):
-        o = dict(w._SAGLAM, hf_models={"model_sayisi": 0})
+        o = dict(w._SAGLAM, hf_models={"indirme_dagilimi": {"toplam": 0}})
         kod, r = w.denetle(seri(tmp_path, kosu(ts(1), o) + ["42"]), SIMDI)
         assert kod == KIRMIZI and r["skipped_non_object_rows"] == 1
 
@@ -508,3 +508,74 @@ class TestAppendOnly:
         monkeypatch.setattr(w, "datetime", sabit_datetime(SIMDI))
         monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--series", str(yol), "--previous", ""])
         assert w.main() == YESIL
+
+
+class TestPartialAndDrop:
+    def test_nested_package_error_in_an_ok_row_is_red(self, tmp_path):
+        son = dict(w._SAGLAM)
+        son["pypi_downloads"] = {"anthropic": {"aynasiz_toplam": 802816271}, "openai": {"hata": "429"}}
+        s = kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), son)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI
+        assert any("PARTIAL: pypi_downloads" in b and "openai" in b for b in r["findings"])
+
+    def test_carrier_halving_is_yellow(self, tmp_path):
+        son = dict(w._SAGLAM)
+        son["npm_downloads"] = {"pkg": {"toplam_30g": 115914002 // 3}}
+        s = kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), son)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == SARI
+        assert any("DROP: npm_downloads" in b for b in r["findings"])
+
+    def test_moderate_fall_is_green(self, tmp_path):
+        son = dict(w._SAGLAM)
+        son["defillama_summary_virtuals"] = {"total30d": 1055670 * 0.6}
+        s = kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), son)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == YESIL, r["findings"]
+
+
+class TestUnmeasurable:
+    def test_olculemedi_with_numeric_carrier_is_red(self, tmp_path):
+        son = dict(w._SAGLAM)
+        son["sherlock_contests"] = {"yarisma_sayisi": 301, "acik_yarisma": None,
+                                    "olculemedi": "schema broken: none of the 301 items has a numeric `ends_at`"}
+        s = kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), son)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI
+        assert any("UNMEASURABLE: sherlock_contests" in b and "ends_at" in b for b in r["findings"])
+
+    def test_untracked_endpoint_olculemedi_is_red_too(self, tmp_path):
+        ek = kosu(ts(1), {"code4rena_audits": {"yarisma_sayisi": None, "olculemedi": "schema broken"}})
+        kod, r = w.denetle(saglikli(tmp_path, extra=ek), SIMDI)
+        assert kod == KIRMIZI and any("UNMEASURABLE: code4rena_audits" in b for b in r["findings"])
+
+    def test_olculemedi_in_an_older_run_only_is_ignored(self, tmp_path):
+        eski = dict(w._kaydir(w._SAGLAM, -20))
+        eski["sherlock_contests"] = dict(eski["sherlock_contests"], olculemedi="x")
+        s = kosu(ts(15), eski) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), w._SAGLAM)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == YESIL, r["findings"]
+
+
+class TestCarrierChoice:
+    def test_hf_carrier_is_total_downloads(self):
+        assert w.TASIYICILAR["hf_models"]({"model_sayisi": 100, "indirme_dagilimi": {"toplam": 5.0}}) == 5.0
+
+    def test_defillama_category_carrier_is_30d_total(self):
+        assert w.TASIYICILAR["defillama_fees_ai_agents"](
+            {"ai_agent_protokol_sayisi": 17, "ai_total30d": 9.5}) == 9.5
+
+    def test_real_series_has_no_frozen_finding_for_moving_carriers(self):
+        from conftest import KOK
+        _, r = w.denetle(KOK / "ai-arz-serisi.ndjson", SIMDI + timedelta(days=41), onceki=None)
+        donmus = [b for b in r["findings"] if "FROZEN" in b]
+        for uc in ("hf_models", "defillama_fees_ai_agents", "x402_discovery", "apify_store",
+                   "defillama_summary_virtuals", "npm_downloads", "pypi_downloads", "github_repos"):
+            assert not any(uc in b for b in donmus), donmus
+
+    def test_frozen_message_states_the_derivation(self, tmp_path):
+        s = kosu(ts(15), w._SAGLAM) + kosu(ts(8), w._SAGLAM) + kosu(ts(1), w._SAGLAM)
+        _, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert all("calibration debt" not in b for b in r["findings"])
+        assert any("derived from %d runs" % w.DONMUS_TURETME_KOSU in b for b in r["findings"])

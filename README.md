@@ -50,8 +50,11 @@ already contains.
 - **11 endpoints**, all public, **no authentication, no account, no scraping of gated content**
 - One run ≈ **85 seconds** for all 11 endpoints, cost **$0** (measured 2026-08-18)
 - Every run appends one line per endpoint to `ai-arz-serisi.ndjson` (JSON Lines, append-only)
-- Runs **weekly, Mondays 07:00 UTC**, plus an **independent daily freshness watchdog at 07:30 UTC** —
-  because a collector that silently returns zero is worse than one that visibly fails
+- Runs **twice a week, Mondays and Thursdays 07:00 UTC**, plus an **independent daily freshness watchdog
+  at 07:30 UTC** — because a collector that silently returns zero is worse than one that visibly fails.
+  The series also holds the set-up runs of 2026-08-18 to 2026-08-21 (up to six a day), and from 2026-08-20
+  to 2026-09-14 a second collector ran at about 06:30 UTC, so those days carry two runs. Rows written by a
+  collector that sets `AI_ARZ_TOPLAYICI` carry its name in `toplayici` (`collector_id`).
 - Record structure is documented key by key in [**Schema**](#schema) below
 - Each publication is **OpenTimestamps-stamped**: the series is copied to a frozen, dated snapshot under
   [`archive/`](archive/) and that snapshot is stamped next to it (`archive/ai-arz-serisi-<UTC stamp>.ndjson.ots`),
@@ -101,6 +104,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `hata` | `error` | string | Python exception repr, truncated; only present on failure |
 | `url` | `url` | string | endpoint URL (v0.1 rows only; later versions record it in `not`) |
 | `bayt` | `bytes` | integer | raw response size (v0.1 rows only); raw payloads are not stored |
+| `toplayici` | `collector_id` | string | which collector host wrote the row (the AI_ARZ_TOPLAYICI setting, at most 40 characters); absent when not set |
 
 #### Distribution summary
 
@@ -329,9 +333,9 @@ carry the meaning.
    start high.
 6. **The watchdog currently guards 10 of the 11 endpoints.** `code4rena_audits` was added to the collector
    after the watchdog's thresholds were derived, and its load-bearing number is not yet in the watchdog's
-   table. A silent zero on that one endpoint would not be caught today. Stated here rather than fixed
-   quietly, because the thresholds are supposed to be re-derived from measurement, not guessed — that
-   happens once ~6 runs have accumulated.
+   table, so a silent zero there is not caught by the zero check (a reported `olculemedi` is). The frozen
+   thresholds and carriers were re-derived from the 28 runs up to 2026-09-28; the Hugging Face and DeFiLlama
+   category carriers are now the summed downloads and the summed 30-day fees, which move with every run.
 7. **`cantina_competitions` is implemented and measured but not yet wired in.** It is present in
    `collector.py` and deliberately absent from the active endpoint list, so it produces no rows.
 8. **One reordering in the first week.** When the rows of the second collector were merged on 2026-08-24,

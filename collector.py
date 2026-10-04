@@ -29,7 +29,7 @@ Internal identifiers and the published JSON keys remain Turkish — the keys are
 series continuity. See the Schema section of README.md for the full key map, and use
 `to_english.py` to generate an English-keyed mirror of the series.
 """
-import json, sys, time, urllib.request, urllib.error, urllib.parse
+import json, os, sys, time, urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -451,6 +451,13 @@ def uc_github():
     return cikti
 
 
+def hata_iceride(ozet):
+    """True when the summary, or one of its per-package sub-summaries, carries an error."""
+    if not isinstance(ozet, dict):
+        return False
+    return bool(ozet.get("hata")) or any(isinstance(v, dict) and v.get("hata") for v in ozet.values())
+
+
 UCLAR = [
     ("x402_discovery",            uc_x402,                 "per-resource 30d calls/payers; ROLLING WINDOW = not archived upstream"),
     ("sherlock_leaderboard",      uc_sherlock_leaderboard, "researcher lifetime earnings; CUMULATIVE = no date parameter"),
@@ -469,13 +476,17 @@ UCLAR = [
 
 def main():
     simdi = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    # which collector wrote the row, when more than one runs: set AI_ARZ_TOPLAYICI on each host
+    toplayici = os.environ.get("AI_ARZ_TOPLAYICI", "").strip()[:40]
     satirlar = []
     for ad, fn, notu in UCLAR:
         kayit = {"zaman_utc": simdi, "surum": SURUM, "uc": ad, "not": notu}
+        if toplayici:
+            kayit["toplayici"] = toplayici
         t0 = time.time()
         try:
             kayit["ozet"] = fn()
-            kayit["durum"] = "HATA-ICERIDE" if isinstance(kayit["ozet"], dict) and kayit["ozet"].get("hata") else "OK"
+            kayit["durum"] = "HATA-ICERIDE" if hata_iceride(kayit["ozet"]) else "OK"
         except urllib.error.HTTPError as e:
             kayit["durum"] = "HTTP-HATA"; kayit["http"] = e.code
         except Exception as e:
