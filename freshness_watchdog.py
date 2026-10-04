@@ -17,6 +17,8 @@ INDEPENDENT FAULT CLASSES ARE MEASURED (none of them can see the others):
   (+) MISSING    — does the last run carry fewer endpoints than expected (one dropped silently)
   (4) STALE-SOURCE — on the open-window endpoints, did even the newest listed entry start
                    more than KAYNAK_ESKI_GUN days ago (the listing may no longer be updated)
+  (6) PARTIAL/DROP — a per-package error inside the last run's summary (red), or a
+                   load-bearing number that fell by more than DUSUS_ORANI in one run (yellow)
   (5) APPEND-ONLY — does the series still begin, byte for byte, with the newest snapshot
                    under archive/ (no row changed, removed or reordered)
 
@@ -78,6 +80,12 @@ DONMUS_YENIDEN_TURET_KOSU = 6
 DONMUS_MIN_YAYILIM_GUN = 10
 
 KAYITLI_UC = 10
+
+# DROP: a load-bearing number that falls by more than half between two consecutive runs.
+# MEASURED [series up to 2026-09-28, OK rows without per-package errors]: the largest
+# one-run fall of any load-bearing number was 22.4 % (defillama_summary_virtuals total30d);
+# every fall past 50 % came from a run with packages missing.
+DUSUS_ORANI = 0.5
 
 # SOURCE FRESHNESS for the open-window endpoints: `en_yeni_baslangic_utc` is the start time
 # of the newest entry the platform lists. If even the newest entry started this long ago,
@@ -222,6 +230,12 @@ def denetle(seri: Path, simdi=None, onceki=None):
         durum = k.get("durum")
         if durum and durum != "OK":
             kirmizi.append("ENDPOINT-ERROR: %s status=%s" % (uc, durum))
+        oz = k.get("ozet")
+        if isinstance(oz, dict):
+            eksik_paket = sorted(p for p, v in oz.items() if isinstance(v, dict) and v.get("hata"))
+            if eksik_paket:
+                kirmizi.append("PARTIAL: %s has errors inside the summary for %s"
+                               % (uc, ",".join(eksik_paket)))
         cikar = TASIYICILAR.get(uc)
         if cikar is None:
             continue
@@ -261,6 +275,11 @@ def denetle(seri: Path, simdi=None, onceki=None):
                 break
         if len(dizi) >= 2:
             donmus[uc] = n
+            yeni, eski = dizi[0], dizi[1]
+            if (isinstance(yeni, (int, float)) and isinstance(eski, (int, float)) and eski > 0
+                    and yeni < eski * (1 - DUSUS_ORANI)):
+                sari.append("DROP: %s load-bearing number fell from %s to %s (more than %d %% in one run)"
+                            % (uc, eski, yeni, DUSUS_ORANI * 100))
         # TIME-SPREAD condition: same-day repeats are NOT frozen-ness (fake-red brake)
         yayilim = 0.0
         if n >= 2:

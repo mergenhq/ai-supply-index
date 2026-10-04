@@ -451,6 +451,13 @@ def uc_github():
     return cikti
 
 
+def hata_iceride(ozet):
+    """True when the summary, or one of its per-package sub-summaries, carries an error."""
+    if not isinstance(ozet, dict):
+        return False
+    return bool(ozet.get("hata")) or any(isinstance(v, dict) and v.get("hata") for v in ozet.values())
+
+
 UCLAR = [
     ("x402_discovery",            uc_x402,                 "per-resource 30d calls/payers; ROLLING WINDOW = not archived upstream"),
     ("sherlock_leaderboard",      uc_sherlock_leaderboard, "researcher lifetime earnings; CUMULATIVE = no date parameter"),
@@ -479,7 +486,7 @@ def main():
         t0 = time.time()
         try:
             kayit["ozet"] = fn()
-            kayit["durum"] = "HATA-ICERIDE" if isinstance(kayit["ozet"], dict) and kayit["ozet"].get("hata") else "OK"
+            kayit["durum"] = "HATA-ICERIDE" if hata_iceride(kayit["ozet"]) else "OK"
         except urllib.error.HTTPError as e:
             kayit["durum"] = "HTTP-HATA"; kayit["http"] = e.code
         except Exception as e:

@@ -563,3 +563,16 @@ class TestCollectorId:
         monkeypatch.setenv("AI_ARZ_TOPLAYICI", "x" * 100)
         c.main()
         assert len(json.loads(seri.read_text(encoding="utf-8"))["toplayici"]) == 40
+
+
+class TestNestedErrorStatus:
+    """A per-package error inside the summary makes the row HATA-ICERIDE, not OK."""
+    def test_nested_package_error(self, monkeypatch, tmp_path, capsys):
+        seri = tmp_path / "seri.ndjson"
+        monkeypatch.setattr(c, "SERI", seri)
+        monkeypatch.setattr(c, "UCLAR", [
+            ("paket", lambda: {"a": {"toplam_30g": 5}, "b": {"hata": "HTTPError 429"}}, ""),
+            ("temiz", lambda: {"a": {"toplam_30g": 5}}, "")])
+        assert c.main() == 0
+        r = {json.loads(x)["uc"]: json.loads(x) for x in seri.read_text(encoding="utf-8").splitlines()}
+        assert r["paket"]["durum"] == "HATA-ICERIDE" and r["temiz"]["durum"] == "OK"

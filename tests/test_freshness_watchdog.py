@@ -508,3 +508,28 @@ class TestAppendOnly:
         monkeypatch.setattr(w, "datetime", sabit_datetime(SIMDI))
         monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--series", str(yol), "--previous", ""])
         assert w.main() == YESIL
+
+
+class TestPartialAndDrop:
+    def test_nested_package_error_in_an_ok_row_is_red(self, tmp_path):
+        son = dict(w._SAGLAM)
+        son["pypi_downloads"] = {"anthropic": {"aynasiz_toplam": 802816271}, "openai": {"hata": "429"}}
+        s = kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), son)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI
+        assert any("PARTIAL: pypi_downloads" in b and "openai" in b for b in r["findings"])
+
+    def test_carrier_halving_is_yellow(self, tmp_path):
+        son = dict(w._SAGLAM)
+        son["npm_downloads"] = {"pkg": {"toplam_30g": 115914002 // 3}}
+        s = kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), son)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == SARI
+        assert any("DROP: npm_downloads" in b for b in r["findings"])
+
+    def test_moderate_fall_is_green(self, tmp_path):
+        son = dict(w._SAGLAM)
+        son["defillama_summary_virtuals"] = {"total30d": 1055670 * 0.6}
+        s = kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), son)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == YESIL, r["findings"]
