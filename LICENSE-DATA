@@ -5,12 +5,15 @@ Full text: https://creativecommons.org/licenses/by/4.0/legalcode
 
 Covered files:
 - `ai-arz-serisi.ndjson`  (the measurement series)
-- `*.ots`                 (OpenTimestamps proofs)
+- `series-en.ndjson`      (the same series with English keys, generated)
+- `archive/`              (frozen, dated snapshots of the series)
+- `*.ots`                 (OpenTimestamps proofs, at the root and under archive/)
 - the measurement tables reproduced in `README.md`
 
 You are free to share and adapt this data for any purpose, including
 commercially, provided you give appropriate credit (see "How to cite" in
 README.md), link to the licence, and indicate if changes were made.
 
-The **code** in this repository (`ai_arz_toplayici.py`, `ai_arz_tazelik_bekci.py`,
-`kos_haftalik.sh`) is licensed separately under the MIT License — see `LICENSE`.
+The **code** in this repository (`collector.py`, `freshness_watchdog.py`,
+`run_weekly.sh`, `to_english.py`, `schema_map.json` and the tests under `tests/`)
+is licensed separately under the MIT License — see `LICENSE`.

@@ -1,0 +1,27 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Test suite
+        run: python -m pytest -q
+      - name: Built-in self-tests
+        run: |
+          python freshness_watchdog.py --self-test
+          python to_english.py --self-test
+      - name: Lint the weekly runner
+        run: shellcheck run_weekly.sh

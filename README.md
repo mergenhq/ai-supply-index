@@ -13,19 +13,21 @@ This repository is that snapshot, taken every Monday, with the method open and t
 
 ## First measurement — 2026-08-18
 
-| endpoint | what it measures | value |
-|---|---|---|
-| DefiLlama (AI-Agents category) | protocol fees, 30d | **$1,177,308** across **17** protocols |
-| → concentration | share of the single largest | **89.7 %** (Virtuals Protocol, $1,055,670) |
-| Sherlock (security-audit contests) | researchers with lifetime payouts | **1,710** researchers · **$15,762,894** lifetime |
-| Sherlock contests | contests listed | **301** (open right now: **0**) |
-| x402 (agent payment discovery) | resources registered | **15,149** · 30d calls **322,375** |
-| Apify store | published actors | **47,257** (top 1,000 by popularity sampled) |
-| Hugging Face | downloads, top 100 models on the Hub (all kinds, by downloads) | **1.58 B** |
-| npm / PyPI | SDK download volume | Anthropic SDK: **115.9 M** (npm, 30d) |
-| GitHub | agent-framework repos | AutoGPT 186,664 ★ · langchain 144,478 ★ · MCP servers 89,659 ★ |
+| endpoint | what it measures | value | run (`zaman_utc`) |
+|---|---|---|---|
+| DefiLlama (AI-Agents category) | protocol fees, 30d | **$1,177,308** across **17** protocols | `2026-08-18T07:51:45Z` |
+| → concentration | share of the single largest | **89.7 %** (Virtuals Protocol, $1,055,670) | `2026-08-18T07:51:45Z` |
+| Sherlock (security-audit contests) | researchers with lifetime payouts | **1,710** researchers · **$15,762,894** lifetime | `2026-08-18T07:51:45Z` |
+| Sherlock contests | contests listed | **301** (open right now: **0**) | `2026-08-18T16:27:27Z` (first run that counted open contests) |
+| x402 (agent payment discovery) | resources registered | **15,149** · 30d calls **322,375** | `2026-08-18T15:04:11Z` |
+| Apify store | published actors | **47,257** (top 1,000 by popularity sampled) | `2026-08-18T15:04:11Z` |
+| Hugging Face | downloads, top 100 models on the Hub (all kinds, by downloads) | **1.58 B** | `2026-08-18T15:04:11Z` |
+| npm / PyPI | SDK download volume | Anthropic SDK: **115.9 M** (npm, 30d) | `2026-08-18T07:51:45Z` |
+| GitHub | agent-framework repos | AutoGPT 186,664 ★ · langchain 144,478 ★ · MCP servers 89,659 ★ | `2026-08-18T15:04:11Z` |
 
-Every number above is recomputable from `ai-arz-serisi.ndjson` in this repository.
+Every number above is recomputable from `ai-arz-serisi.ndjson` in this repository: select the rows whose
+`zaman_utc` is the run named in the last column. The table is the 2026-08-18 baseline and is not updated;
+later values are in the series.
 
 ### What stands out in week 1
 
@@ -40,15 +42,15 @@ audit platforms" should measure the *cadence of open windows*, not the existence
 
 That finding is why an eleventh endpoint (Code4rena) was added right after this first measurement:
 one platform being shut is an anecdote, two is the beginning of a pattern. Its rows enter the
-series with the next weekly run — this table deliberately reports only what the published series
-already contains.
+series from the `2026-08-18T16:31:07Z` run onward — this table deliberately reports only rows from
+earlier runs.
 
 ---
 
 ## Method
 
 - **11 endpoints**, all public, **no authentication, no account, no scraping of gated content**
-- One run ≈ **85 seconds** for all 11 endpoints, cost **$0** (measured 2026-08-18)
+- One run takes about **70–190 seconds** for all 11 endpoints (median ≈ 100 s up to 2026-09-28; `saniye` per row), cost **$0**
 - Every run appends one line per endpoint to `ai-arz-serisi.ndjson` (JSON Lines, append-only)
 - Runs **twice a week, Mondays and Thursdays 07:00 UTC**, plus an **independent daily freshness watchdog
   at 07:30 UTC** — because a collector that silently returns zero is worse than one that visibly fails.
@@ -96,13 +98,13 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `zaman_utc` | `timestamp_utc` | string (ISO-8601, UTC) | when the run started; all rows of one run share this value, so it doubles as the run id |
 | `surum` | `version` | string | collector version that wrote the row (absent on the very first v0.1 rows) |
 | `uc` | `endpoint` | string | endpoint name, e.g. x402_discovery, github_repos |
-| `not` | `note` | string | free-text annotation about the endpoint's limits; rows written before 2026-08-18 carry Turkish text |
+| `not` | `note` | string | free-text annotation about the endpoint's limits; rows up to and including the 2026-08-18T16:31:07Z run carry Turkish text |
 | `ozet` | `summary` | object | the measurement itself; its shape depends on the endpoint |
 | `durum` | `status` | string | OK \| HATA (error) \| HTTP-HATA (http error) \| HATA-ICERIDE (error inside the summary) |
 | `saniye` | `duration_s` | number (seconds) | wall-clock time this endpoint took |
 | `http` | `http_status` | integer | HTTP status code, only present when the request failed |
 | `hata` | `error` | string | Python exception repr, truncated; only present on failure |
-| `url` | `url` | string | endpoint URL (v0.1 rows only; later versions record it in `not`) |
+| `url` | `url` | string | on the envelope: the endpoint URL (v0.1 rows only); inside open entries (open_entries): the entry's page on the platform |
 | `bayt` | `bytes` | integer | raw response size (v0.1 rows only); raw payloads are not stored |
 | `toplayici` | `collector_id` | string | which collector host wrote the row (the AI_ARZ_TOPLAYICI setting, at most 40 characters); absent when not set |
 
@@ -330,7 +332,7 @@ carry the meaning.
    counters, missing endpoints and open-window listings whose newest entry is months old — not just staleness.
 4. **Eleven endpoints is not the supply side.** It is eleven measurable corners of it. Coverage will be stated
    with every expansion.
-5. **Short history.** As of this publication the series is **days old**. Its value compounds; it does not
+5. **Short history.** The series starts on 2026-08-18. Its value compounds; it does not
    start high.
 6. **The watchdog currently guards 10 of the 11 endpoints.** `code4rena_audits` was added to the collector
    after the watchdog's thresholds were derived, and its load-bearing number is not yet in the watchdog's
@@ -364,8 +366,8 @@ the AI economy is itself a conflict worth naming.
 
 | what | licence | file |
 |---|---|---|
-| **Data** — `ai-arz-serisi.ndjson`, `series-en.ndjson`, `*.ots`, tables in this README | **CC BY 4.0** | `LICENSE-DATA` |
-| **Code** — `collector.py`, `freshness_watchdog.py`, `run_weekly.sh`, `to_english.py`, `schema_map.json` | **MIT** | `LICENSE` |
+| **Data** — `ai-arz-serisi.ndjson`, `series-en.ndjson`, `archive/`, `*.ots`, tables in this README | **CC BY 4.0** | `LICENSE-DATA` |
+| **Code** — `collector.py`, `freshness_watchdog.py`, `run_weekly.sh`, `to_english.py`, `schema_map.json`, `tests/` | **MIT** | `LICENSE` |
 
 Use the data freely, including commercially — attribution is the only condition.
 
@@ -386,7 +388,7 @@ only way this series can be evaluated as a track record rather than as a claim.
 ## Reproduce it
 
 ```bash
-python3 collector.py             # one run, ~85 s, 11 endpoints, no credentials; exit 0=all OK 3=partial 1=none
+python3 collector.py             # one run, ~100 s, 11 endpoints, no credentials; exit 0=all OK 3=partial 1=none
 python3 freshness_watchdog.py    # audit the series: 0=green 1=yellow 2=red
 python3 to_english.py --english  # English-keyed mirror -> series-en.ndjson
 ```
