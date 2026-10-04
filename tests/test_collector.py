@@ -682,3 +682,13 @@ class TestOutOption:
         monkeypatch.setattr(c, "SERI", seri)
         monkeypatch.setattr(c, "UCLAR", [("a", lambda: {"n": 1}, "")])
         assert c.main([]) == 0 and seri.exists()
+
+
+def test_script_entry_point_prints_help_without_collecting(monkeypatch, capsys):
+    import runpy
+    monkeypatch.setattr("sys.argv", ["collector.py", "--help"])
+    with pytest.raises(SystemExit) as e:
+        runpy.run_path(c.__file__, run_name="__main__")
+    assert e.value.code == 0
+    out = capsys.readouterr().out
+    assert out.startswith("usage: collector.py") and "--out" in out
