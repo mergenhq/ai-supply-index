@@ -132,10 +132,11 @@ TASIYICILAR = {
 }
 
 
-def kayitlar(seri: Path):
-    out = []
+def kayitlar_ve_bozuk(seri: Path):
+    """Parsed lines plus the number of non-blank lines that are not valid JSON."""
+    out, bozuk = [], 0
     if not seri.exists():
-        return out
+        return out, bozuk
     for satir in seri.read_text(encoding="utf-8").splitlines():
         satir = satir.strip()
         if not satir:
@@ -143,8 +144,12 @@ def kayitlar(seri: Path):
         try:
             out.append(json.loads(satir))
         except json.JSONDecodeError:
-            pass
-    return out
+            bozuk += 1
+    return out, bozuk
+
+
+def kayitlar(seri: Path):
+    return kayitlar_ve_bozuk(seri)[0]
 
 
 def _yas_gun(ts: str, simdi: datetime):
@@ -180,7 +185,10 @@ def denetle(seri: Path, simdi=None, onceki=None):
 
     # a line that is valid JSON but not an object (e.g. a bare `42`) cannot be a record:
     # skip it and report how many were skipped, instead of crashing on x.get()
-    ham = kayitlar(seri)
+    ham, bozuk = kayitlar_ve_bozuk(Path(seri))
+    r["unparseable_rows"] = bozuk
+    if bozuk:
+        kirmizi.append("UNPARSEABLE: %d line(s) in the series are not valid JSON" % bozuk)
     rows = [x for x in ham if isinstance(x, dict)]
     atlanan = len(ham) - len(rows)
     r["record_count"] = len(rows)
