@@ -21,7 +21,7 @@ This repository is that snapshot, taken every Monday, with the method open and t
 | Sherlock contests | contests listed | **301** (open right now: **0**) |
 | x402 (agent payment discovery) | resources registered | **15,149** · 30d calls **322,375** |
 | Apify store | published actors | **47,257** (top 1,000 by popularity sampled) |
-| Hugging Face | downloads, top 100 AI-agent models | **1.58 B** |
+| Hugging Face | downloads, top 100 models on the Hub (all kinds, by downloads) | **1.58 B** |
 | npm / PyPI | SDK download volume | Anthropic SDK: **115.9 M** (npm, 30d) |
 | GitHub | agent-framework repos | AutoGPT 186,664 ★ · langchain 144,478 ★ · MCP servers 89,659 ★ |
 
@@ -125,7 +125,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `maks` | `max` | number | largest single value |
 | `histogram` | `histogram` | object | bucket label -> count; bucket labels are data (see passthrough) |
 | `top1_pay` | `top1_share` | number (0-1) | share of the total held by the single largest value — the concentration measure |
-| `top10_pay` | `top10_share` | number (0-1) | share of the total held by the ten largest values |
+| `top10_pay` | `top10_share` | number (0-1) | share of the total held by the ten largest values; it is 1.0 by construction whenever there are ten or fewer non-zero values (n minus zero_count) |
 
 #### Pagination and coverage
 
@@ -254,7 +254,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 
 #### PyPI downloads
 
-*Per-package download volume excluding mirror traffic. The upstream window is roughly 362 days, so old data falls off.*
+*Per-package download volume excluding mirror traffic. The upstream window is roughly 183 days (about six months), so old data falls off. `non_mirror_total` is the sum over that rolling window, not an all-time total.*
 
 | key (as published) | English | type | what it measures |
 |---|---|---|---|

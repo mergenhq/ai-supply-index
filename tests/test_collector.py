@@ -438,11 +438,11 @@ class TestPackageEndpoints:
 
     def test_pypi(self, ag, monkeypatch):
         monkeypatch.setattr(c, "PYPI_PAKETLER", ["anthropic", "kotu"])
-        veri = ([{"category": "with_mirrors", "date": "d0", "downloads": 10 ** 6}]
-                + [{"category": "without_mirrors", "date": "d%d" % i, "downloads": 1} for i in range(1, 41)])
+        veri = ([{"category": "with_mirrors", "date": "d00", "downloads": 10 ** 6}]
+                + [{"category": "without_mirrors", "date": "d%02d" % i, "downloads": 1} for i in range(1, 41)])
         ag({"anthropic": {"data": veri}, "kotu": urllib.error.URLError("x")})
         o = c.uc_pypi()
-        assert o["anthropic"] == {"kayit": 41, "aynasiz_gun": 40, "ilk_tarih": "d0", "son_tarih": "d40",
+        assert o["anthropic"] == {"kayit": 41, "aynasiz_gun": 40, "ilk_tarih": "d00", "son_tarih": "d40",
                                   "aynasiz_toplam": 40, "aynasiz_son30g": 30}
         assert "hata" in o["kotu"]
 
@@ -655,3 +655,12 @@ class TestCapsAndMissingValues:
         p.write_text("".join(satir(SIMDI.isoformat(), u, o) + "\n" for u, o in son.items()), encoding="utf-8")
         kod, r = w.denetle(p, SIMDI)
         assert kod == 2 and any("UNMEASURABLE: npm_downloads" in b and "pkg" in b for b in r["findings"])
+
+
+def test_pypi_rows_are_ordered_by_date(ag, monkeypatch):
+    monkeypatch.setattr(c, "PYPI_PAKETLER", ["p"])
+    veri = [{"category": "without_mirrors", "date": "2026-01-%02d" % g, "downloads": g} for g in range(31, 0, -1)]
+    ag({"/p/": {"data": veri}})
+    o = c.uc_pypi()["p"]
+    assert o["ilk_tarih"] == "2026-01-01" and o["son_tarih"] == "2026-01-31"
+    assert o["aynasiz_son30g"] == sum(range(2, 32))
