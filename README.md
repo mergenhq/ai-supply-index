@@ -68,7 +68,7 @@ earlier runs.
 - `ai-arz-serisi.ndjson.ots` at the repository root is the stamp of the 2026-08-24 version of the series
   (133 rows, sha256 `a1a625642dad9d91…`, commit `baee016`). It is kept as published; it does not cover the
   current file. Use the newest proof under `archive/` instead.
-- A dated, append-only [**evidence record**](record/) kept by the operator about the wider system this index is part of (not specific to this index) — negatives mandatory, entries never edited
+- A dated, append-only [**evidence record**](record/) of what this system measured about itself — negatives mandatory, entries never edited
 
 ### The silent-zero brake
 

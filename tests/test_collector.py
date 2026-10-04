@@ -559,9 +559,9 @@ class TestCollectorId:
 
     def test_set(self, monkeypatch, tmp_path, capsys):
         seri = self.kur(monkeypatch, tmp_path)
-        monkeypatch.setenv("AI_ARZ_TOPLAYICI", "vps-1")
+        monkeypatch.setenv("AI_ARZ_TOPLAYICI", "a")
         c.main()
-        assert json.loads(seri.read_text(encoding="utf-8"))["toplayici"] == "vps-1"
+        assert json.loads(seri.read_text(encoding="utf-8"))["toplayici"] == "a"
 
     @pytest.mark.parametrize("deger", [None, "", "   "])
     def test_unset_or_blank_is_absent(self, monkeypatch, tmp_path, capsys, deger):

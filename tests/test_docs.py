@@ -178,6 +178,6 @@ def test_using_the_series_example_runs(tmp_path, monkeypatch):
     assert {"2026-W34", "2026-W40"} <= {h["week"] for h in haftalik}
 
 
-def test_record_link_says_what_the_record_covers():
+def test_record_link_keeps_its_wording():
     satir = next(ln for ln in README.splitlines() if "](record/)" in ln)
-    assert "operator" in satir and "not specific to this index" in satir
+    assert "of what this system measured about itself" in satir
