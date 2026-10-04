@@ -3,8 +3,8 @@
     "purpose": "Turkish -> English key map for the AI Supply Index series (ai-arz-serisi.ndjson).",
     "why_keys_are_turkish": "The series is append-only and OpenTimestamps-stamped. Renaming keys in place would make earlier lines unreadable and put two schemas in one file. The keys are therefore FROZEN; this map is the English contract, and to_english.py generates an English-keyed mirror (series-en.ndjson) without touching the original.",
     "source_of_truth": "This file. The Schema table in README.md is generated from it via `python3 to_english.py --schema-md`.",
-    "schema_version": "0.3",
-    "generated_for_collector_version": "0.3",
+    "schema_version": "0.4",
+    "generated_for_collector_version": "0.4",
     "key_count": 106
   },
 
@@ -46,7 +46,7 @@
         ["n", "n", "integer", "how many numeric values entered the distribution"],
         ["toplam", "total", "number", "sum of all values"],
         ["sifir_sayisi", "zero_count", "integer", "how many of the values were exactly 0"],
-        ["p10", "p10", "number", "10th percentile (nearest-rank, no interpolation)"],
+        ["p10", "p10", "number", "10th percentile, nearest-rank (the value at rank ceil(p/100 * n)), no interpolation. Rows with version up to 0.3 used index round((n-1) * p/100), which can differ by one rank for small n"],
         ["p25", "p25", "number", "25th percentile"],
         ["p50", "p50", "number", "median"],
         ["p75", "p75", "number", "75th percentile"],
@@ -69,7 +69,7 @@
         ["son_sayfa_alani", "last_page_reported", "integer", "last-page number the API reported (Code4rena)"],
         ["taranan", "scanned", "integer", "how many items yielded a usable numeric value"],
         ["kapsam_notu", "coverage_note", "string", "explicit statement of what this sample is and is not (e.g. upper tier, not a median)"],
-        ["olculemedi", "unmeasurable", "string (reason)", "PRESENT ONLY WHEN THE SCHEMA BROKE. If this key exists, the accompanying value is NOT zero — it is UNKNOWN. The collector refuses to silently count 0 when a response changes shape; it records why instead. Treat a row carrying `unmeasurable` as missing data, never as a measured zero."]
+        ["olculemedi", "unmeasurable", "string (reason)", "PRESENT ONLY WHEN THE MEASUREMENT IS INCOMPLETE: the schema broke, a page cap was reached, or values were missing (also inside a per-package sub-summary). If this key exists, the accompanying value is NOT zero — it is UNKNOWN. The collector refuses to silently count 0 when a response changes shape; it records why instead. Treat a row carrying `unmeasurable` as missing data, never as a measured zero."]
       ]
     },
     {

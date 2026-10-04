@@ -146,9 +146,19 @@ class TestDenetle:
         kod, _ = w.denetle(seri(tmp_path, ["{bozuk", "not json"]), SIMDI)
         assert kod == KIRMIZI
 
-    def test_invalid_json_line_is_ignored(self, tmp_path):
-        kod, r = w.denetle(saglikli(tmp_path, extra=["{yarim satir"]), SIMDI)
-        assert kod == YESIL and r["record_count"] == 30
+    def test_invalid_json_line_is_red_and_counted(self, tmp_path):
+        kod, r = w.denetle(saglikli(tmp_path, extra=["{yarim satir", "not json"]), SIMDI)
+        assert kod == KIRMIZI and r["record_count"] == 30 and r["unparseable_rows"] == 2
+        assert any("UNPARSEABLE: 2 line(s)" in b for b in r["findings"])
+
+    def test_clean_series_reports_zero_unparseable(self, tmp_path):
+        _, r = w.denetle(saglikli(tmp_path), SIMDI)
+        assert r["unparseable_rows"] == 0
+
+    def test_kayitlar_ve_bozuk(self, tmp_path):
+        p = tmp_path / "s.ndjson"
+        p.write_text('{"a": 1}\n{bozuk\n\n42\n', encoding="utf-8")
+        assert w.kayitlar_ve_bozuk(p) == ([{"a": 1}, 42], 1)
 
     # staleness thresholds are strict ">" comparisons
     @pytest.mark.parametrize("gun,beklenen", [

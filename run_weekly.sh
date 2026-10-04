@@ -29,7 +29,8 @@ say "STEP-1 rc=$RC_COLLECT"
 PREVIOUS="$(ls "$ARCHIVE"/ai-arz-serisi-*.ndjson 2>/dev/null | sort | tail -n 1)"
 
 say "=== STEP-2 STAMP (frozen snapshot) ==="
-if [ "$RC_COLLECT" -eq 0 ] && [ -s "$SERIES" ]; then
+# 0 = every endpoint OK, 3 = some endpoints OK: both are stamped; 1 = none OK
+if { [ "$RC_COLLECT" -eq 0 ] || [ "$RC_COLLECT" -eq 3 ]; } && [ -s "$SERIES" ]; then
   mkdir -p "$ARCHIVE"
   COPY="$ARCHIVE/ai-arz-serisi-$STAMP.ndjson"
   cp "$SERIES" "$COPY"
@@ -46,5 +47,11 @@ python3 "$ROOT/freshness_watchdog.py" --ledger "$HOME/logs/ai-arz-alarm.ndjson" 
 RC_WATCHDOG=$?
 say "STEP-3 rc=$RC_WATCHDOG (0=GREEN 1=YELLOW 2=RED)"
 
-say "=== DONE collect=$RC_COLLECT watchdog=$RC_WATCHDOG ==="
-exit "$RC_COLLECT"
+# exit: 1 = nothing collected · 2 = watchdog RED · 3 = partial collection · 0 = otherwise
+if [ "$RC_COLLECT" -eq 1 ]; then RC=1
+elif [ "$RC_WATCHDOG" -eq 2 ]; then RC=2
+elif [ "$RC_COLLECT" -ne 0 ]; then RC="$RC_COLLECT"
+else RC=0
+fi
+say "=== DONE collect=$RC_COLLECT watchdog=$RC_WATCHDOG exit=$RC ==="
+exit "$RC"

@@ -29,15 +29,18 @@ Internal identifiers and the published JSON keys remain Turkish — the keys are
 series continuity. See the Schema section of README.md for the full key map, and use
 `to_english.py` to generate an English-keyed mirror of the series.
 """
-import json, os, sys, time, urllib.request, urllib.error, urllib.parse
+import json, math, os, sys, time, urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
 KOK = Path(__file__).resolve().parent
 SERI = KOK / "ai-arz-serisi.ndjson"
-UA = "Mozilla/5.0 (compatible; mergen-arz-olcum/0.3)"
+UA = "Mozilla/5.0 (compatible; mergen-arz-olcum/0.4)"
 ZAMAN_ASIMI = 30
-SURUM = "0.3"
+SURUM = "0.4"
+
+# exit codes: 0 = every endpoint OK · KISMI = some endpoints OK · 1 = none OK
+KISMI = 3
 
 # OPEN-WINDOW WATCH: how many open entries are LISTED per record.
 # The count is always exact; this cap only bounds record size (the series is append-only).
@@ -51,6 +54,12 @@ GH_DEPOLAR = ["langchain-ai/langchain", "anthropics/anthropic-sdk-python",
               "Significant-Gravitas/AutoGPT"]
 LLAMA_PROTOKOL = "virtuals-protocol"   # 89.7 % of the AI-Agents category
 X402_SAYFA_TAVANI = 60                 # 60*500 = 30,000 resources; safety brake
+YARISMA_SAYFA_TAVANI = 40              # Sherlock (100/page) and Code4rena (25/page) safety brake
+
+
+def _tavan_notu(sayfa, toplam):
+    return ("page cap reached: walked %d pages, the API reports %s items in total; "
+            "the summary covers only the pages walked" % (sayfa, toplam))
 
 
 # ------------------------------------------------------------------- helpers
@@ -62,11 +71,12 @@ def cek(url, ham=False):
 
 
 def yuzdelik(dizi, p):
-    """Nearest-rank percentile, no linear interpolation. `dizi` must already be sorted."""
+    """Nearest-rank percentile, no interpolation: the value at 1-based rank ceil(p/100 * n).
+    `dizi` must already be sorted. (Rows up to v0.3 used index round((n-1) * p/100).)"""
     if not dizi:
         return None
-    k = int(round((len(dizi) - 1) * p / 100.0))
-    return dizi[max(0, min(k, len(dizi) - 1))]
+    sira = math.ceil(len(dizi) * p / 100.0)
+    return dizi[max(1, min(sira, len(dizi))) - 1]
 
 
 def dagilim_ozeti(degerler, kovalar):
@@ -122,10 +132,13 @@ def uc_x402():
             break
         time.sleep(0.25)
     ilk_uc.sort(key=lambda x: -x[0])
-    return {"kaynak_sayisi": toplam, "taranan": len(cagri), "sayfa": sayfa,
-            "cagri_30g": dagilim_ozeti(cagri, [1, 10, 100, 1000, 10000]),
-            "odeyen_30g": dagilim_ozeti(odeyen, [1, 2, 5, 10, 100]),
-            "top10_cagri": [{"cagri": c, "kaynak": r} for c, r in ilk_uc[:10]]}
+    o = {"kaynak_sayisi": toplam, "taranan": len(cagri), "sayfa": sayfa,
+         "cagri_30g": dagilim_ozeti(cagri, [1, 10, 100, 1000, 10000]),
+         "odeyen_30g": dagilim_ozeti(odeyen, [1, 2, 5, 10, 100]),
+         "top10_cagri": [{"cagri": c, "kaynak": r} for c, r in ilk_uc[:10]]}
+    if sayfa >= X402_SAYFA_TAVANI and ogeler and (toplam is None or sayfa * 500 < toplam):
+        o["olculemedi"] = _tavan_notu(sayfa, toplam)
+    return o
 
 
 def uc_sherlock_leaderboard():
@@ -190,7 +203,7 @@ def uc_sherlock_contests():
     """
     simdi = int(time.time())
     ogeler, toplam, sayfa, sayfa_alani = [], None, 0, None
-    while sayfa < 40:
+    while sayfa < YARISMA_SAYFA_TAVANI:
         _, d = cek("https://mainnet-contest.sherlock.xyz/contests?per_page=100&page=%d" % (sayfa + 1))
         if not isinstance(d, dict) or "items" not in d:
             return {"yarisma_sayisi": None, "sayfa_ogesi": 0, "sayfa": sayfa,
@@ -225,11 +238,14 @@ def uc_sherlock_contests():
         if k:
             kamu.append(kapi)
     acik.sort(key=lambda x: x["kalan_gun"])
-    return {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
-            "sayfa_alani": sayfa_alani,
-            "en_yeni_baslangic_utc": _en_yeni(i.get("starts_at") for i in ogeler),
-            "acik_yarisma": len(acik), "acik_kamu": len(kamu),
-            "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
+    o = {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
+         "sayfa_alani": sayfa_alani,
+         "en_yeni_baslangic_utc": _en_yeni(i.get("starts_at") for i in ogeler),
+         "acik_yarisma": len(acik), "acik_kamu": len(kamu),
+         "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
+    if sayfa >= YARISMA_SAYFA_TAVANI and d.get("has_next"):
+        o["olculemedi"] = _tavan_notu(sayfa, toplam)
+    return o
 
 
 def uc_code4rena_audits():
@@ -241,7 +257,7 @@ def uc_code4rena_audits():
     but no verdict depends on ordering — all 19 pages are walked."""
     simdi = int(time.time())
     ogeler, toplam, sayfa, son_sayfa = [], None, 0, None
-    while sayfa < 40:
+    while sayfa < YARISMA_SAYFA_TAVANI:
         _, d = cek("https://code4rena.com/api/v1/audits?page=%d" % (sayfa + 1))
         au = ((d or {}).get("data") or {}).get("audits") if isinstance(d, dict) else None
         if not isinstance(au, list):
@@ -276,11 +292,14 @@ def uc_code4rena_audits():
         if k:
             kamu.append(kapi)
     acik.sort(key=lambda x: x["kalan_gun"])
-    return {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
-            "son_sayfa_alani": son_sayfa,
-            "en_yeni_baslangic_utc": _en_yeni(_iso_epoch(a.get("startTime")) for a in ogeler),
-            "acik_yarisma": len(acik), "acik_kamu": len(kamu),
-            "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
+    o = {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
+         "son_sayfa_alani": son_sayfa,
+         "en_yeni_baslangic_utc": _en_yeni(_iso_epoch(a.get("startTime")) for a in ogeler),
+         "acik_yarisma": len(acik), "acik_kamu": len(kamu),
+         "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
+    if sayfa >= YARISMA_SAYFA_TAVANI and pg.get("nextPage"):
+        o["olculemedi"] = _tavan_notu(sayfa, toplam)
+    return o
 
 
 def uc_cantina_competitions():
@@ -406,10 +425,15 @@ def uc_npm():
             _, d = cek("https://api.npmjs.org/downloads/range/last-month/%s"
                        % urllib.parse.quote(pkt, safe=""))
             gunler = d.get("downloads", [])
+            sayili = [g["downloads"] for g in gunler
+                      if isinstance(g, dict) and isinstance(g.get("downloads"), (int, float))]
             cikti[pkt] = {"baslangic": d.get("start"), "bitis": d.get("end"),
                           "gun": len(gunler),
-                          "toplam_30g": sum(g.get("downloads", 0) for g in gunler),
+                          "toplam_30g": sum(sayili),
                           "son_gun": gunler[-1] if gunler else None}
+            if len(sayili) < len(gunler):
+                cikti[pkt]["olculemedi"] = ("%d of %d day records have no numeric downloads"
+                                            % (len(gunler) - len(sayili), len(gunler)))
         except Exception as e:
             cikti[pkt] = {"hata": repr(e)[:120]}
         time.sleep(0.5)
@@ -424,11 +448,18 @@ def uc_pypi():
             _, d = cek("https://pypistats.org/api/packages/%s/overall" % pkt)
             veri = d.get("data", [])
             wo = [x for x in veri if x.get("category") == "without_mirrors"]
+
+            def say(x):
+                return x["downloads"] if isinstance(x.get("downloads"), (int, float)) else 0
             cikti[pkt] = {"kayit": len(veri), "aynasiz_gun": len(wo),
                           "ilk_tarih": veri[0].get("date") if veri else None,
                           "son_tarih": veri[-1].get("date") if veri else None,
-                          "aynasiz_toplam": sum(x.get("downloads", 0) for x in wo),
-                          "aynasiz_son30g": sum(x.get("downloads", 0) for x in wo[-30:])}
+                          "aynasiz_toplam": sum(say(x) for x in wo),
+                          "aynasiz_son30g": sum(say(x) for x in wo[-30:])}
+            eksik = sum(1 for x in wo if not isinstance(x.get("downloads"), (int, float)))
+            if eksik:
+                cikti[pkt]["olculemedi"] = ("%d of %d non-mirror rows have no numeric downloads"
+                                            % (eksik, len(wo)))
         except Exception as e:
             cikti[pkt] = {"hata": repr(e)[:120]}
         time.sleep(2)
@@ -504,7 +535,9 @@ def main():
     if basarili < len(satirlar):
         print("ENDPOINT MISSING — read the `durum` field, do not trust the row count "
               "('exit=0 with zero content' is the trap this guards against).")
-    return 0 if basarili else 1
+    if basarili == len(satirlar) and satirlar:
+        return 0
+    return KISMI if basarili else 1
 
 
 if __name__ == "__main__":

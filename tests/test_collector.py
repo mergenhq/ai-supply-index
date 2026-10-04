@@ -107,6 +107,20 @@ class TestYuzdelik:
         assert c.yuzdelik(d, 50) == 100 and c.yuzdelik(d, 90) == 10000 and c.yuzdelik(d, 10) == 1
 
 
+class TestNearestRank:
+    """Nearest-rank: the value at rank ceil(p/100 * n), 1-based."""
+    @pytest.mark.parametrize("p, beklenen", [(10, 2), (25, 5), (50, 9), (75, 13), (90, 16), (95, 17), (99, 17)])
+    def test_n17(self, p, beklenen):
+        assert c.yuzdelik(list(range(1, 18)), p) == beklenen
+
+    def test_no_bankers_rounding(self):
+        # n=6, p=50 -> rank 3; n=4, p=50 -> rank 2
+        assert c.yuzdelik([1, 2, 3, 4, 5, 6], 50) == 3 and c.yuzdelik([1, 2, 3, 4], 50) == 2
+
+    def test_version_is_bumped_with_the_definition(self):
+        assert c.SURUM == "0.4"
+
+
 class TestDagilimOzeti:
     def test_empty_and_non_numeric(self):
         assert c.dagilim_ozeti([], [1]) == {"n": 0}
@@ -416,7 +430,8 @@ class TestPackageEndpoints:
                 "/bos": {}})
         o = c.uc_npm()
         assert o["@anthropic-ai/sdk"] == {"baslangic": "a", "bitis": "b", "gun": 3, "toplam_30g": 12,
-                                          "son_gun": {"downloads": 7}}
+                                          "son_gun": {"downloads": 7},
+                                          "olculemedi": "1 of 3 day records have no numeric downloads"}
         assert o["bozuk"] == {"hata": "RuntimeError('down')"}
         assert o["bos"]["toplam_30g"] == 0 and o["bos"]["son_gun"] is None
         assert len(s.cagrilar) == 3
@@ -465,7 +480,7 @@ class TestMain:
             ("http", http, "n"),
             ("hata", patla, "n"),
         ])
-        assert c.main() == 0
+        assert c.main() == c.KISMI
         r = {k["uc"]: k for k in self.oku(seri)}
         assert [k["uc"] for k in self.oku(seri)] == ["ok", "ic", "liste", "http", "hata"]
         assert r["ok"] == {"zaman_utc": SIMDI.isoformat(timespec="seconds"), "surum": c.SURUM, "uc": "ok",
@@ -573,6 +588,70 @@ class TestNestedErrorStatus:
         monkeypatch.setattr(c, "UCLAR", [
             ("paket", lambda: {"a": {"toplam_30g": 5}, "b": {"hata": "HTTPError 429"}}, ""),
             ("temiz", lambda: {"a": {"toplam_30g": 5}}, "")])
-        assert c.main() == 0
+        assert c.main() == c.KISMI
         r = {json.loads(x)["uc"]: json.loads(x) for x in seri.read_text(encoding="utf-8").splitlines()}
         assert r["paket"]["durum"] == "HATA-ICERIDE" and r["temiz"]["durum"] == "OK"
+
+
+
+class TestExitCodes:
+    def kur(self, monkeypatch, tmp_path, uclar):
+        monkeypatch.setattr(c, "SERI", tmp_path / "seri.ndjson")
+        monkeypatch.setattr(c, "UCLAR", uclar)
+
+    def test_all_ok_is_0(self, monkeypatch, tmp_path, capsys):
+        self.kur(monkeypatch, tmp_path, [("a", lambda: {}, ""), ("b", lambda: {}, "")])
+        assert c.main() == 0
+
+    def test_partial_is_3(self, monkeypatch, tmp_path, capsys):
+        def patla():
+            raise OSError("x")
+        self.kur(monkeypatch, tmp_path, [("a", lambda: {}, ""), ("b", patla, "")])
+        assert c.main() == c.KISMI == 3
+
+    def test_none_ok_is_1(self, monkeypatch, tmp_path, capsys):
+        self.kur(monkeypatch, tmp_path, [("a", lambda: {"hata": "x"}, "")])
+        assert c.main() == 1
+
+
+
+class TestCapsAndMissingValues:
+    """Hitting a page cap, or a day record without a number, is recorded as olculemedi."""
+    def test_x402_cap_reached_is_unmeasurable(self, ag, monkeypatch):
+        monkeypatch.setattr(c, "X402_SAYFA_TAVANI", 2)
+        ag({"x402": {"pagination": {"total": 5000}, "items": [{"quality": {"l30DaysTotalCalls": 1}}]}})
+        o = c.uc_x402()
+        assert o["sayfa"] == 2 and "page cap" in o["olculemedi"] and "5000" in o["olculemedi"]
+
+    def test_x402_complete_walk_has_no_olculemedi(self, ag):
+        ag({"x402": {"pagination": {"total": 1}, "items": [{"quality": {"l30DaysTotalCalls": 1}}]}})
+        assert "olculemedi" not in c.uc_x402()
+
+    def test_sherlock_cap_reached_is_unmeasurable(self, ag, monkeypatch):
+        monkeypatch.setattr(c, "YARISMA_SAYFA_TAVANI", 2)
+        ag({"contests": {"items": [{"id": 1, "ends_at": SIMDI_EP - GUN}], "total": 900, "has_next": True}})
+        o = c.uc_sherlock_contests()
+        assert o["sayfa"] == 2 and "page cap" in o["olculemedi"]
+
+    def test_code4rena_cap_reached_is_unmeasurable(self, ag, monkeypatch):
+        monkeypatch.setattr(c, "YARISMA_SAYFA_TAVANI", 2)
+        ag({"code4rena": {"data": {"audits": [{"slug": "a", "endTime": iso(SIMDI_EP - GUN)}]},
+                          "pagination": {"total": 900, "nextPage": 9}}})
+        o = c.uc_code4rena_audits()
+        assert o["sayfa"] == 2 and "page cap" in o["olculemedi"]
+
+    def test_pypi_row_without_downloads(self, ag, monkeypatch):
+        monkeypatch.setattr(c, "PYPI_PAKETLER", ["p"])
+        ag({"/p/": {"data": [{"category": "without_mirrors", "date": "d1", "downloads": 3},
+                             {"category": "without_mirrors", "date": "d2"}]}})
+        o = c.uc_pypi()["p"]
+        assert o["aynasiz_toplam"] == 3 and o["olculemedi"] == "1 of 2 non-mirror rows have no numeric downloads"
+
+    def test_nested_olculemedi_is_red_in_the_watchdog(self, tmp_path):
+        son = dict(w._SAGLAM)
+        son["npm_downloads"] = {"pkg": {"toplam_30g": 115914002, "olculemedi": "1 of 30 day records"}}
+        p = tmp_path / "s.ndjson"
+        satir = lambda t, u, o: json.dumps({"zaman_utc": t, "uc": u, "ozet": o, "durum": "OK"})
+        p.write_text("".join(satir(SIMDI.isoformat(), u, o) + "\n" for u, o in son.items()), encoding="utf-8")
+        kod, r = w.denetle(p, SIMDI)
+        assert kod == 2 and any("UNMEASURABLE: npm_downloads" in b and "pkg" in b for b in r["findings"])

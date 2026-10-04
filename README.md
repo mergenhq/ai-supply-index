@@ -115,7 +115,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `n` | `n` | integer | how many numeric values entered the distribution |
 | `toplam` | `total` | number | sum of all values |
 | `sifir_sayisi` | `zero_count` | integer | how many of the values were exactly 0 |
-| `p10` | `p10` | number | 10th percentile (nearest-rank, no interpolation) |
+| `p10` | `p10` | number | 10th percentile, nearest-rank (the value at rank ceil(p/100 * n)), no interpolation. Rows with version up to 0.3 used index round((n-1) * p/100), which can differ by one rank for small n |
 | `p25` | `p25` | number | 25th percentile |
 | `p50` | `p50` | number | median |
 | `p75` | `p75` | number | 75th percentile |
@@ -139,7 +139,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `son_sayfa_alani` | `last_page_reported` | integer | last-page number the API reported (Code4rena) |
 | `taranan` | `scanned` | integer | how many items yielded a usable numeric value |
 | `kapsam_notu` | `coverage_note` | string | explicit statement of what this sample is and is not (e.g. upper tier, not a median) |
-| `olculemedi` | `unmeasurable` | string (reason) | PRESENT ONLY WHEN THE SCHEMA BROKE. If this key exists, the accompanying value is NOT zero — it is UNKNOWN. The collector refuses to silently count 0 when a response changes shape; it records why instead. Treat a row carrying `unmeasurable` as missing data, never as a measured zero. |
+| `olculemedi` | `unmeasurable` | string (reason) | PRESENT ONLY WHEN THE MEASUREMENT IS INCOMPLETE: the schema broke, a page cap was reached, or values were missing (also inside a per-package sub-summary). If this key exists, the accompanying value is NOT zero — it is UNKNOWN. The collector refuses to silently count 0 when a response changes shape; it records why instead. Treat a row carrying `unmeasurable` as missing data, never as a measured zero. |
 
 #### Open-window watch
 
@@ -385,7 +385,7 @@ only way this series can be evaluated as a track record rather than as a claim.
 ## Reproduce it
 
 ```bash
-python3 collector.py             # one run, ~85 s, 11 endpoints, no credentials
+python3 collector.py             # one run, ~85 s, 11 endpoints, no credentials; exit 0=all OK 3=partial 1=none
 python3 freshness_watchdog.py    # audit the series: 0=green 1=yellow 2=red
 python3 to_english.py --english  # English-keyed mirror -> series-en.ndjson
 ```
@@ -396,7 +396,7 @@ python3 to_english.py --english  # English-keyed mirror -> series-en.ndjson
 | [`series-en.ndjson`](series-en.ndjson) | the same data with English keys, generated |
 | [`collector.py`](collector.py) | the collector, 11 endpoints |
 | [`freshness_watchdog.py`](freshness_watchdog.py) | the consumer that catches silent zeros |
-| [`run_weekly.sh`](run_weekly.sh) | collect → stamp → audit, as cron runs it |
+| [`run_weekly.sh`](run_weekly.sh) | collect → stamp → audit, as cron runs it; exit 1 = nothing collected, 2 = watchdog red, 3 = partial |
 | [`schema_map.json`](schema_map.json) | the key contract, source of the Schema table |
 | [`to_english.py`](to_english.py) | mirror generator + schema-table generator |
 
