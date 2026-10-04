@@ -362,6 +362,7 @@ be incomplete, so pick rows before building a time series:
 
 A runnable version that prints one value per endpoint and week, with gaps shown as `GAP`, is
 [`examples/weekly_series.py`](examples/weekly_series.py) (`python3 examples/weekly_series.py --help`).
+[`examples/week_over_week.py`](examples/week_over_week.py) builds on it and prints the change between consecutive weeks.
 
 ```python
 import json
