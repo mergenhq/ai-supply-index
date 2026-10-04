@@ -15,7 +15,7 @@ This repository is that snapshot, taken every Monday, with the method open and t
 
 | endpoint | what it measures | value |
 |---|---|---|
-| DefiLlama (AI-Agents category) | protocol fee revenue, 30d | **$1,177,308** across **17** protocols |
+| DefiLlama (AI-Agents category) | protocol fees, 30d | **$1,177,308** across **17** protocols |
 | → concentration | share of the single largest | **89.7 %** (Virtuals Protocol, $1,055,670) |
 | Sherlock (security-audit contests) | researchers with lifetime payouts | **1,710** researchers · **$15,762,894** lifetime |
 | Sherlock contests | contests listed | **301** (open right now: **0**) |
@@ -29,7 +29,7 @@ Every number above is recomputable from `ai-arz-serisi.ndjson` in this repositor
 
 ### What stands out in week 1
 
-**Concentration.** In the AI-agent protocol category, **89.7 % of 30-day fee revenue sits in one
+**Concentration.** In the AI-agent protocol category, **89.7 % of 30-day fees sits in one
 protocol**. The remaining 16 protocols share roughly $121,600 between them. Whatever "the agent
 economy" is earning, it is not earning it broadly — at least not yet, and not here.
 
@@ -190,35 +190,35 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 
 #### DeFiLlama
 
-*Two endpoints: the AI-Agents category cross-section, and the daily revenue series of the single largest protocol in it.*
+*Two endpoints from DeFiLlama's fees dataset (fees paid by users, not protocol revenue): the AI-Agents category cross-section, and the daily fee series of one fixed protocol in it.*
 
 | key (as published) | English | type | what it measures |
 |---|---|---|---|
 | `ai_agent_protokol_sayisi` | `ai_agent_protocol_count` | integer | protocols DeFiLlama files under an AI-Agent category |
 | `toplam_protokol` | `total_protocols` | integer | protocols in the whole fees dataset, for context |
-| `ai_total24h` | `ai_total_24h` | number (USD) | summed 24h fee revenue across AI-agent protocols |
+| `ai_total24h` | `ai_total_24h` | number (USD) | summed 24h fees across AI-agent protocols |
 | `ai_total24h_n` | `ai_total_24h_n` | integer | how many protocols contributed a number to that sum |
-| `ai_total7d` | `ai_total_7d` | number (USD) | summed 7-day fee revenue |
+| `ai_total7d` | `ai_total_7d` | number (USD) | summed 7-day fees |
 | `ai_total7d_n` | `ai_total_7d_n` | integer | how many protocols contributed |
-| `ai_total30d` | `ai_total_30d` | number (USD) | summed 30-day fee revenue |
+| `ai_total30d` | `ai_total_30d` | number (USD) | summed 30-day fees |
 | `ai_total30d_n` | `ai_total_30d_n` | integer | how many protocols contributed |
-| `ai_top5_30d` | `ai_top5_30d` | array | five largest AI-agent protocols by 30-day revenue |
+| `ai_top5_30d` | `ai_top5_30d` | array | five largest AI-agent protocols by 30-day fees |
 | `ad` | `name` | string | protocol name (inside ai_top5_30d) |
-| `usd30d` | `usd_30d` | number (USD) | that protocol's 30-day revenue |
-| `ai_30g_dagilim` | `ai_30d_distribution` | object (distribution) | distribution of 30-day revenue across AI-agent protocols — where concentration becomes visible |
+| `usd30d` | `usd_30d` | number (USD) | that protocol's 30-day fees |
+| `ai_30g_dagilim` | `ai_30d_distribution` | object (distribution) | distribution of 30-day fees across AI-agent protocols — where concentration becomes visible |
 | `protokol` | `protocol` | string | the single protocol tracked in detail |
 | `gun_sayisi` | `day_count` | integer | days available in that protocol's daily series |
-| `total24h` | `total_24h` | number (USD) | protocol fee revenue, last 24h |
-| `total7d` | `total_7d` | number (USD) | protocol fee revenue, last 7 days |
-| `total30d` | `total_30d` | number (USD) | protocol fee revenue, last 30 days |
-| `totalAllTime` | `total_all_time` | number (USD) | protocol fee revenue, all time |
+| `total24h` | `total_24h` | number (USD) | protocol fees, last 24h |
+| `total7d` | `total_7d` | number (USD) | protocol fees, last 7 days |
+| `total30d` | `total_30d` | number (USD) | protocol fees, last 30 days |
+| `totalAllTime` | `total_all_time` | number (USD) | protocol fees, all time |
 | `ilk_gun_utc` | `first_day_utc` | string (date) | first day present in the daily series |
 | `son_gun_utc` | `last_day_utc` | string (date) | last day present in the daily series |
-| `son30g_dagilim` | `last_30d_distribution` | object (distribution) | distribution of the protocol's daily revenue over the last 30 days |
+| `son30g_dagilim` | `last_30d_distribution` | object (distribution) | distribution of the protocol's daily fees over the last 30 days |
 
 #### Apify store
 
-*Published automation actors. SAMPLED: top 1,000 by popularity, which is an upper tier and explicitly not the store median.*
+*Published automation actors. SAMPLED: top 1,000 by popularity, which is an upper tier and explicitly not the store median. About 85-87 % of the sampled actors carry a numeric user count; `scanned` gives the exact number that entered the distribution.*
 
 | key (as published) | English | type | what it measures |
 |---|---|---|---|
@@ -322,7 +322,8 @@ carry the meaning.
 ### Known limits (stated, not hidden)
 
 1. **Summaries only.** Raw API payloads are not stored (size); a `bayt` field records payload size for control.
-2. **Sampling where the source paginates.** Apify: top 1,000 of 47,257 by popularity. Hugging Face: top 100.
+2. **Sampling where the source paginates.** Apify: top 1,000 of 47,257 by popularity, of which about 835–870 per run
+   carry a numeric user count (`taranan` / `scanned` gives the exact number). Hugging Face: top 100.
    These are **upper-tier samples, not medians** — treat them as such.
 3. **Schema fragility.** If an endpoint changes shape, a naive reader returns 0 silently. This happened to us
    on day one (`contests` vs `items`), which is why the freshness watchdog checks for silent zeros, frozen
@@ -400,7 +401,8 @@ python3 to_english.py --english  # English-keyed mirror -> series-en.ndjson
 | [`schema_map.json`](schema_map.json) | the key contract, source of the Schema table |
 | [`to_english.py`](to_english.py) | mirror generator + schema-table generator |
 
-Every script self-tests: `freshness_watchdog.py --self-test` and `to_english.py --self-test`.
+Tests: `python3 -m pytest -q` runs the suite under `tests/` (no network, no writes outside a temporary
+directory). `freshness_watchdog.py --self-test` and `to_english.py --self-test` are built-in self-tests.
 
 ---
 

@@ -500,7 +500,7 @@ UCLAR = [
     ("code4rena_audits",          uc_code4rena_audits,     "audit metadata + OPEN-WINDOW watch; all 19 pages walked"),
     ("defillama_fees_ai_agents",  uc_defillama_kategori,   "AI Agents category cross-section"),
     ("defillama_summary_virtuals",uc_defillama_protokol,   "fixed protocol (largest on 2026-08-18); daily series archived"),
-    ("apify_store",               uc_apify_store,          "users per actor; 7/30/90d SLIDING window = data falls off"),
+    ("apify_store",               uc_apify_store,          "cumulative totalUsers per actor; top 1,000 by popularity"),
     ("hf_models",                 uc_hf_modeller,          "cumulative downloads; no official HISTORICAL endpoint"),
     ("npm_downloads",             uc_npm,                  "clipped to ~547 days = old data falls off"),
     ("pypi_downloads",            uc_pypi,                 "~180-day window = old data falls off"),

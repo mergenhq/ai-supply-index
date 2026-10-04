@@ -209,6 +209,18 @@ def oz_test(seri: Path):
     kontrol("package identifiers pass through, their children still map",
             "@anthropic-ai/sdk" in p and p["@anthropic-ai/sdk"] == {"downloads_30d": 5}, str(p))
 
+    # 7b) an open-window entry with every field _kapi() writes converts cleanly
+    kapi = {"zaman_utc": "2026-01-01T00:00:00+00:00", "uc": "sherlock_contests",
+            "ozet": {"yarisma_sayisi": 1, "acik_yarisma": 1, "acik_kamu": 1,
+                     "en_yeni_baslangic_utc": "2026-01-01T00:00:00+00:00",
+                     "acik_kapilar": [{"arena": "cantina", "id": "a", "baslik": "t", "kamu": True,
+                                       "biter_utc": "2026-01-02T00:00:00+00:00", "kalan_gun": 1.0,
+                                       "odul": 1, "url": "https://example.org", "etiket": "e",
+                                       "kyc": False}]}}
+    e3 = []
+    cevir(kapi, "sherlock_contests", [], keys, meta, e3)
+    kontrol("open-window entry with every field converts with 0 unmapped keys", not e3, str(e3))
+
     # 8) the silent-zero brake is documented, not just implemented
     kontrol("`olculemedi` maps to `unmeasurable`", keys.get("olculemedi") == "unmeasurable")
 
