@@ -53,11 +53,16 @@ already contains.
 - Runs **weekly, Mondays 07:00 UTC**, plus an **independent daily freshness watchdog at 07:30 UTC** —
   because a collector that silently returns zero is worse than one that visibly fails
 - Record structure is documented key by key in [**Schema**](#schema) below
-- Series is **OpenTimestamps-stamped** (`ai-arz-serisi.ndjson.ots`) so that "we measured this on that date"
-  is verifiable, not asserted. **Honest status:** the stamp is submitted to calendar servers; Bitcoin
-  anchoring takes hours, so `ots verify` reads *pending* until a block confirms it. Also: the series is
-  append-only, so each stamp covers the file **as of that commit** — earlier stamps do not validate later
-  files. Archived point-in-time snapshots with their own stamps are kept under `archive/` upstream.
+- Each publication is **OpenTimestamps-stamped**: the series is copied to a frozen, dated snapshot under
+  [`archive/`](archive/) and that snapshot is stamped next to it (`archive/ai-arz-serisi-<UTC stamp>.ndjson.ots`),
+  so that "we measured this on that date" is verifiable, not asserted. The newest snapshot is byte-identical
+  to `ai-arz-serisi.ndjson` at the time of publication. Each stamp covers its own snapshot only — the series
+  is append-only, so earlier stamps do not validate later files.
+  **Status:** a stamp is first submitted to calendar servers; Bitcoin anchoring takes hours, so `ots verify`
+  reads *pending* until a block confirms it.
+- `ai-arz-serisi.ndjson.ots` at the repository root is the stamp of the 2026-08-24 version of the series
+  (133 rows, sha256 `a1a625642dad9d91…`, commit `baee016`). It is kept as published; it does not cover the
+  current file. Use the newest proof under `archive/` instead.
 - A dated, append-only [**evidence record**](record/) of what this system measured about itself — negatives mandatory, entries never edited
 
 ### The silent-zero brake
@@ -360,8 +365,11 @@ Use the data freely, including commercially — attribution is the only conditio
 ```
 AI Supply Index (2026). Weekly timestamped measurement of the AI economy's supply side.
 mergenhq. https://github.com/mergenhq/ai-supply-index
-— accessed YYYY-MM-DD, series stamp sha256:681d8310e3249352…
+— accessed YYYY-MM-DD, snapshot archive/ai-arz-serisi-20260928T074103Z.ndjson, sha256:171798127f984121…
 ```
+
+Cite the newest snapshot under `archive/` at the time you accessed the data, with the first 16 hex characters
+of its sha256 (`sha256sum archive/<file>`); that snapshot's `.ots` proof sits next to it.
 
 A single citation format is deliberate: it makes attribution countable, which is the
 only way this series can be evaluated as a track record rather than as a claim.
