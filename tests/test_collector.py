@@ -559,9 +559,9 @@ class TestCollectorId:
 
     def test_set(self, monkeypatch, tmp_path, capsys):
         seri = self.kur(monkeypatch, tmp_path)
-        monkeypatch.setenv("AI_ARZ_TOPLAYICI", "vps-1")
+        monkeypatch.setenv("AI_ARZ_TOPLAYICI", "a")
         c.main()
-        assert json.loads(seri.read_text(encoding="utf-8"))["toplayici"] == "vps-1"
+        assert json.loads(seri.read_text(encoding="utf-8"))["toplayici"] == "a"
 
     @pytest.mark.parametrize("deger", [None, "", "   "])
     def test_unset_or_blank_is_absent(self, monkeypatch, tmp_path, capsys, deger):
@@ -664,3 +664,21 @@ def test_pypi_rows_are_ordered_by_date(ag, monkeypatch):
     o = c.uc_pypi()["p"]
     assert o["ilk_tarih"] == "2026-01-01" and o["son_tarih"] == "2026-01-31"
     assert o["aynasiz_son30g"] == sum(range(2, 32))
+
+
+class TestOutOption:
+    def test_out_writes_elsewhere_and_leaves_the_series_alone(self, monkeypatch, tmp_path, capsys):
+        seri = tmp_path / "seri.ndjson"
+        seri.write_text("onceki\n", encoding="utf-8")
+        monkeypatch.setattr(c, "SERI", seri)
+        monkeypatch.setattr(c, "UCLAR", [("a", lambda: {"n": 1}, "")])
+        hedef = tmp_path / "kopya.ndjson"
+        assert c.main(["--out", str(hedef)]) == 0
+        assert seri.read_text(encoding="utf-8") == "onceki\n"
+        assert json.loads(hedef.read_text(encoding="utf-8"))["uc"] == "a"
+
+    def test_default_is_the_series(self, monkeypatch, tmp_path, capsys):
+        seri = tmp_path / "seri.ndjson"
+        monkeypatch.setattr(c, "SERI", seri)
+        monkeypatch.setattr(c, "UCLAR", [("a", lambda: {"n": 1}, "")])
+        assert c.main([]) == 0 and seri.exists()

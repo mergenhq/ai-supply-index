@@ -348,6 +348,41 @@ carry the meaning.
 
 ---
 
+## Using the series
+
+One run is all rows sharing a `zaman_utc`. Some days carry more than one run (see *Method*), and a row can
+be incomplete, so pick rows before building a time series:
+
+- use rows with `durum == "OK"` only;
+- treat a summary that carries `olculemedi`, or a per-package sub-summary that carries `hata` or
+  `olculemedi`, as missing data — never as a measured zero;
+- for a weekly series, keep the last usable row per endpoint and ISO week.
+
+```python
+import json
+from datetime import datetime
+
+rows = [json.loads(line) for line in open("ai-arz-serisi.ndjson", encoding="utf-8") if line.strip()]
+
+def usable(r):
+    o = r.get("ozet")
+    if r.get("durum") != "OK" or not isinstance(o, dict) or "olculemedi" in o:
+        return False
+    return not any(isinstance(v, dict) and ("hata" in v or "olculemedi" in v) for v in o.values())
+
+latest = {}
+for r in rows:
+    if usable(r):
+        year, week, _ = datetime.fromisoformat(r["zaman_utc"]).isocalendar()
+        key = ("%d-W%02d" % (year, week), r["uc"])
+        if key not in latest or r["zaman_utc"] > latest[key]["zaman_utc"]:
+            latest[key] = dict(r, week=key[0])
+
+weekly = sorted(latest.values(), key=lambda r: (r["week"], r["uc"]))
+```
+
+---
+
 ## Conflict of interest
 
 The author operates automated trading systems on prediction markets (Kalshi, Hyperliquid, Polymarket),
@@ -388,10 +423,13 @@ only way this series can be evaluated as a track record rather than as a claim.
 ## Reproduce it
 
 ```bash
-python3 collector.py             # one run, ~100 s, 11 endpoints, no credentials; exit 0=all OK 3=partial 1=none
-python3 freshness_watchdog.py    # audit the series: 0=green 1=yellow 2=red
-python3 to_english.py --english  # English-keyed mirror -> series-en.ndjson
+python3 collector.py --out my-run.ndjson  # one run, ~100 s, 11 endpoints, no credentials; exit 0=all OK 3=partial 1=none
+python3 freshness_watchdog.py             # audit the series: 0=green 1=yellow 2=red
+python3 to_english.py --english           # English-keyed mirror -> series-en.ndjson
 ```
+
+Without `--out`, `collector.py` appends to `ai-arz-serisi.ndjson` itself, and your copy then no longer
+matches the published, stamped file.
 
 | file | what it is |
 |---|---|

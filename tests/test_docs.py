@@ -156,3 +156,28 @@ def test_ci_workflow_runs_the_suite_and_the_self_tests():
     for adim in ("python -m pytest", "freshness_watchdog.py --self-test", "to_english.py --self-test",
                  "shellcheck run_weekly.sh"):
         assert adim in wf, adim
+
+
+def test_reproduce_section_does_not_append_to_the_published_series():
+    blok = README[README.index("## Reproduce it"):]
+    blok = blok[:blok.index("```", blok.index("```") + 3)]
+    assert "collector.py --out" in blok
+
+
+def test_using_the_series_example_runs(tmp_path, monkeypatch):
+    bolum = README[README.index("## Using the series"):]
+    kod = bolum[bolum.index("```python") + len("```python"):]
+    kod = kod[:kod.index("```")]
+    monkeypatch.chdir(KOK)
+    ns = {}
+    exec(compile(kod, "README:Using the series", "exec"), ns)
+    haftalik = ns["weekly"]
+    # one row per (ISO week, endpoint); only OK rows without olculemedi
+    assert len({(h["week"], h["uc"]) for h in haftalik}) == len(haftalik)
+    assert all(h["durum"] == "OK" and "olculemedi" not in (h.get("ozet") or {}) for h in haftalik)
+    assert {"2026-W34", "2026-W40"} <= {h["week"] for h in haftalik}
+
+
+def test_record_link_keeps_its_wording():
+    satir = next(ln for ln in README.splitlines() if "](record/)" in ln)
+    assert "of what this system measured about itself" in satir
