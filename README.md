@@ -141,6 +141,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `yarisma_sayisi` | `competition_count` | integer \| null | total competitions/audits the platform lists; null when unmeasurable |
 | `acik_yarisma` | `open_count` | integer \| null | how many are open right now (end time in the future); null when unmeasurable |
 | `acik_kamu` | `open_public_count` | integer \| null | of those, how many are open to the public (not private/invite-only) |
+| `en_yeni_baslangic_utc` | `newest_start_utc` | string (ISO-8601, UTC) \| null | start time of the newest entry the platform lists; if even this is months old, the listing itself may have stopped updating and the open count describes the listing, not the platform |
 | `acik_kapilar` | `open_entries` | array | the open ones themselves, soonest deadline first, capped at 10 per row to bound record size; the counts above are always exact |
 | `arena` | `arena` | string | which platform the entry came from: sherlock \| code4rena \| cantina |
 | `id` | `id` | string \| integer | platform's own identifier for the entry |
@@ -316,7 +317,7 @@ carry the meaning.
    These are **upper-tier samples, not medians** — treat them as such.
 3. **Schema fragility.** If an endpoint changes shape, a naive reader returns 0 silently. This happened to us
    on day one (`contests` vs `items`), which is why the freshness watchdog checks for silent zeros, frozen
-   counters and missing endpoints — not just staleness.
+   counters, missing endpoints and open-window listings whose newest entry is months old — not just staleness.
 4. **Eleven endpoints is not the supply side.** It is eleven measurable corners of it. Coverage will be stated
    with every expansion.
 5. **Short history.** As of this publication the series is **days old**. Its value compounds; it does not

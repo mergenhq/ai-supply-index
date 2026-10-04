@@ -441,3 +441,27 @@ class TestH2DistinctEndpoints:
         extra = [satir(ts(1), "code4rena_audits", {"yarisma_sayisi": 475})]
         kod, r = w.denetle(saglikli(tmp_path, extra=extra), SIMDI)
         assert kod == YESIL and r["last_run_endpoint_count"] == 10
+
+
+class TestStaleSource:
+    """An open-window endpoint whose newest entry started long ago is flagged YELLOW."""
+    def seri_ile(self, tmp_path, baslangic):
+        son = dict(w._SAGLAM)
+        son["sherlock_contests"] = dict(son["sherlock_contests"], en_yeni_baslangic_utc=baslangic)
+        s = (kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10))
+             + kosu(ts(1), son))
+        return seri(tmp_path, s)
+
+    def test_old_newest_entry_is_yellow(self, tmp_path):
+        kod, r = w.denetle(self.seri_ile(tmp_path, ts(w.KAYNAK_ESKI_GUN + 1)), SIMDI)
+        assert kod == SARI
+        assert any("STALE-SOURCE: sherlock_contests" in b for b in r["findings"])
+
+    def test_recent_newest_entry_is_green(self, tmp_path):
+        kod, r = w.denetle(self.seri_ile(tmp_path, ts(w.KAYNAK_ESKI_GUN - 1)), SIMDI)
+        assert kod == YESIL, r["findings"]
+
+    @pytest.mark.parametrize("deger", [None, "bozuk"])
+    def test_missing_or_unreadable_field_is_ignored(self, tmp_path, deger):
+        kod, r = w.denetle(self.seri_ile(tmp_path, deger), SIMDI)
+        assert kod == YESIL, r["findings"]

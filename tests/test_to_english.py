@@ -250,3 +250,18 @@ class TestMain:
         monkeypatch.setattr(tempfile, "mkdtemp", lambda **k: str(tmp_path))
         assert self.calistir(monkeypatch, ["--self-test"]) == 0
         assert "15 passed / 0 failed" in capsys.readouterr().out
+
+
+def test_open_window_summary_keys_are_all_mapped():
+    """Every key an open-window summary can carry, including a full open entry, is in the map."""
+    meta, keys = te.harita_yukle()
+    ozet = {"yarisma_sayisi": 1, "sayfa_ogesi": 1, "sayfa": 1, "sayfa_alani": 1, "son_sayfa_alani": 1,
+            "en_yeni_baslangic_utc": "2026-08-01T00:00:00+00:00",
+            "acik_yarisma": 1, "acik_kamu": 1, "olculemedi": "x",
+            "acik_kapilar": [{"arena": "cantina", "id": "a", "baslik": "t", "kamu": True,
+                              "biter_utc": "2026-09-01T00:00:00+00:00", "kalan_gun": 1.5,
+                              "odul": 10, "url": "https://example.org", "etiket": "e", "kyc": False}]}
+    eksik = []
+    te.cevir({"zaman_utc": "t", "uc": "sherlock_contests", "ozet": ozet}, "sherlock_contests",
+             [], keys, meta, eksik)
+    assert eksik == []

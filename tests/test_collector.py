@@ -507,3 +507,28 @@ def test_endpoint_registry_is_consistent():
     assert len(adlar) == len(set(adlar))
     assert set(w.TASIYICILAR) <= set(adlar)
     assert all(callable(u[1]) and u[2] for u in c.UCLAR)
+
+
+class TestNewestStart:
+    """Open-window endpoints record when their newest listed entry started."""
+    def test_sherlock(self, ag):
+        items = [{"id": 1, "ends_at": SIMDI_EP - GUN, "starts_at": SIMDI_EP - 40 * GUN},
+                 {"id": 2, "ends_at": SIMDI_EP - GUN, "starts_at": SIMDI_EP - 10 * GUN},
+                 {"id": 3, "ends_at": SIMDI_EP - GUN, "starts_at": None}]
+        ag({"contests": {"items": items, "total": 3}})
+        assert c.uc_sherlock_contests()["en_yeni_baslangic_utc"] == "2026-08-08T15:00:00+00:00"
+
+    def test_code4rena(self, ag):
+        au = [{"slug": "a", "endTime": iso(SIMDI_EP - GUN), "startTime": iso(SIMDI_EP - 3 * GUN)},
+              {"slug": "b", "endTime": iso(SIMDI_EP - GUN), "startTime": "bozuk"}]
+        ag({"code4rena": {"data": {"audits": au}, "pagination": {"total": 2}}})
+        assert c.uc_code4rena_audits()["en_yeni_baslangic_utc"] == "2026-08-15T15:00:00+00:00"
+
+    def test_cantina(self, ag):
+        ag({"cantina": [{"id": "a", "timeframe": {"start": iso(SIMDI_EP - 2 * GUN),
+                                                  "end": iso(SIMDI_EP - GUN)}}]})
+        assert c.uc_cantina_competitions()["en_yeni_baslangic_utc"] == "2026-08-16T15:00:00+00:00"
+
+    def test_no_start_times_is_none(self, ag):
+        ag({"contests": {"items": [{"id": 1, "ends_at": SIMDI_EP - GUN}], "total": 1}})
+        assert c.uc_sherlock_contests()["en_yeni_baslangic_utc"] is None

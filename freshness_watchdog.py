@@ -15,6 +15,8 @@ FOUR INDEPENDENT FAULT CLASSES ARE MEASURED (none of them can see the others):
   (3) FROZEN     — how many consecutive runs returned the identical value (endpoint alive
                    but repeating itself)
   (+) MISSING    — does the last run carry fewer endpoints than expected (one dropped silently)
+  (4) STALE-SOURCE — on the open-window endpoints, did even the newest listed entry start
+                   more than KAYNAK_ESKI_GUN days ago (the listing may no longer be updated)
 
 EXIT CODE: 0=GREEN · 1=YELLOW · 2=RED   (usable directly in cron / `||` chains)
 
@@ -74,6 +76,12 @@ DONMUS_YENIDEN_TURET_KOSU = 6
 DONMUS_MIN_YAYILIM_GUN = 10
 
 KAYITLI_UC = 10
+
+# SOURCE FRESHNESS for the open-window endpoints: `en_yeni_baslangic_utc` is the start time
+# of the newest entry the platform lists. If even the newest entry started this long ago,
+# the listing itself may no longer be updated, and "0 open" would describe the listing,
+# not the platform. YELLOW, because a quiet quarter is possible; a human should check.
+KAYNAK_ESKI_GUN = 90
 
 # LOAD-BEARING NUMBER — the single value that decides whether an endpoint's row is full or empty.
 # All were MEASURED from the 2026-08-18 run; none of them was 0 (the smallest was 17), so a
@@ -208,6 +216,15 @@ def denetle(seri: Path, simdi=None):
             kirmizi.append("SILENT-ZERO: %s load-bearing number is 0 (schema broke; "
                            "in the 2026-08-18 measurement the smallest was 17)" % uc)
     r["last_run_carriers"] = tasiyici_son
+
+    # ── (4) SOURCE FRESHNESS (open-window endpoints) ───────────────────────
+    for k in son_kosu:
+        o = k.get("ozet")
+        bas = o.get("en_yeni_baslangic_utc") if isinstance(o, dict) else None
+        yas_bas = _yas_gun(bas, simdi) if isinstance(bas, str) else None
+        if yas_bas is not None and yas_bas > KAYNAK_ESKI_GUN:
+            sari.append("STALE-SOURCE: %s newest listed entry started %.0f days ago (%s); "
+                        "threshold %d d" % (k.get("uc", "?"), yas_bas, bas, KAYNAK_ESKI_GUN))
 
     # ── (3) FROZEN SERIES ───────────────────────────────────────────────────
     donmus = {}

@@ -5,7 +5,7 @@
     "source_of_truth": "This file. The Schema table in README.md is generated from it via `python3 to_english.py --schema-md`.",
     "schema_version": "0.3",
     "generated_for_collector_version": "0.3",
-    "key_count": 104
+    "key_count": 105
   },
 
   "passthrough": {
@@ -78,6 +78,7 @@
         ["yarisma_sayisi", "competition_count", "integer | null", "total competitions/audits the platform lists; null when unmeasurable"],
         ["acik_yarisma", "open_count", "integer | null", "how many are open right now (end time in the future); null when unmeasurable"],
         ["acik_kamu", "open_public_count", "integer | null", "of those, how many are open to the public (not private/invite-only)"],
+        ["en_yeni_baslangic_utc", "newest_start_utc", "string (ISO-8601, UTC) | null", "start time of the newest entry the platform lists; if even this is months old, the listing itself may have stopped updating and the open count describes the listing, not the platform"],
         ["acik_kapilar", "open_entries", "array", "the open ones themselves, soonest deadline first, capped at 10 per row to bound record size; the counts above are always exact"],
         ["arena", "arena", "string", "which platform the entry came from: sherlock | code4rena | cantina"],
         ["id", "id", "string | integer", "platform's own identifier for the entry"],
