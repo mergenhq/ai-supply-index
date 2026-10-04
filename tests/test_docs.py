@@ -106,3 +106,14 @@ def test_first_measurement_rows_name_their_run_and_match_it():
 def test_readme_has_no_stale_age_claims():
     assert "days old" not in README
     assert "Its rows enter the\nseries with the next weekly run" not in README
+
+
+def test_note_description_names_the_last_turkish_run():
+    turkce = ("arsivli", "kesiti", "kategorisi", "nobeti", "gunluk", "basina")
+    son = max(r["zaman_utc"] for r in seri() if any(t in r["not"] for t in turkce))
+    assert son.replace("+00:00", "Z") in aciklama("not")
+
+
+def test_url_description_covers_open_entries():
+    assert "open entr" in aciklama("url")
+    assert "later versions record it in" not in aciklama("url")

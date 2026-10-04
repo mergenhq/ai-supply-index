@@ -98,13 +98,13 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `zaman_utc` | `timestamp_utc` | string (ISO-8601, UTC) | when the run started; all rows of one run share this value, so it doubles as the run id |
 | `surum` | `version` | string | collector version that wrote the row (absent on the very first v0.1 rows) |
 | `uc` | `endpoint` | string | endpoint name, e.g. x402_discovery, github_repos |
-| `not` | `note` | string | free-text annotation about the endpoint's limits; rows written before 2026-08-18 carry Turkish text |
+| `not` | `note` | string | free-text annotation about the endpoint's limits; rows up to and including the 2026-08-18T16:31:07Z run carry Turkish text |
 | `ozet` | `summary` | object | the measurement itself; its shape depends on the endpoint |
 | `durum` | `status` | string | OK \| HATA (error) \| HTTP-HATA (http error) \| HATA-ICERIDE (error inside the summary) |
 | `saniye` | `duration_s` | number (seconds) | wall-clock time this endpoint took |
 | `http` | `http_status` | integer | HTTP status code, only present when the request failed |
 | `hata` | `error` | string | Python exception repr, truncated; only present on failure |
-| `url` | `url` | string | endpoint URL (v0.1 rows only; later versions record it in `not`) |
+| `url` | `url` | string | on the envelope: the endpoint URL (v0.1 rows only); inside open entries (open_entries): the entry's page on the platform |
 | `bayt` | `bytes` | integer | raw response size (v0.1 rows only); raw payloads are not stored |
 | `toplayici` | `collector_id` | string | which collector host wrote the row (the AI_ARZ_TOPLAYICI setting, at most 40 characters); absent when not set |
 
