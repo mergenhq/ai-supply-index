@@ -334,11 +334,13 @@ carry the meaning.
    with every expansion.
 5. **Short history.** The series starts on 2026-08-18. Its value compounds; it does not
    start high.
-6. **The watchdog currently guards 10 of the 11 endpoints.** `code4rena_audits` was added to the collector
-   after the watchdog's thresholds were derived, and its load-bearing number is not yet in the watchdog's
-   table, so a silent zero there is not caught by the zero check (a reported `olculemedi` is). The frozen
-   thresholds and carriers were re-derived from the 28 runs up to 2026-09-28; the Hugging Face and DeFiLlama
-   category carriers are now the summed downloads and the summed 30-day fees, which move with every run.
+6. **The watchdog guards all 11 of the 11 endpoints.** `code4rena_audits` joined the watchdog's table with
+   `yarisma_sayisi` (total audits listed) as its load-bearing number, derived from the 23 OK runs that carry
+   it up to 2026-09-28: it was never 0 and never fell, so a silent zero or a drop is caught. It stayed at 475
+   for all 41 days, so, like `sherlock_contests`, it is a slow counter and the frozen check reports it as
+   YELLOW until it moves. The frozen thresholds and carriers were re-derived from the 28 runs up to
+   2026-09-28; the Hugging Face and DeFiLlama category carriers are now the summed downloads and the summed
+   30-day fees, which move with every run.
 7. **`cantina_competitions` is implemented and measured but not yet wired in.** It is present in
    `collector.py` and deliberately absent from the active endpoint list, so it produces no rows.
 8. **One reordering in the first week.** When the rows of the second collector were merged on 2026-08-24,
