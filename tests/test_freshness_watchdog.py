@@ -533,3 +533,26 @@ class TestPartialAndDrop:
         s = kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), son)
         kod, r = w.denetle(seri(tmp_path, s), SIMDI)
         assert kod == YESIL, r["findings"]
+
+
+class TestUnmeasurable:
+    def test_olculemedi_with_numeric_carrier_is_red(self, tmp_path):
+        son = dict(w._SAGLAM)
+        son["sherlock_contests"] = {"yarisma_sayisi": 301, "acik_yarisma": None,
+                                    "olculemedi": "schema broken: none of the 301 items has a numeric `ends_at`"}
+        s = kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), son)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI
+        assert any("UNMEASURABLE: sherlock_contests" in b and "ends_at" in b for b in r["findings"])
+
+    def test_untracked_endpoint_olculemedi_is_red_too(self, tmp_path):
+        ek = kosu(ts(1), {"code4rena_audits": {"yarisma_sayisi": None, "olculemedi": "schema broken"}})
+        kod, r = w.denetle(saglikli(tmp_path, extra=ek), SIMDI)
+        assert kod == KIRMIZI and any("UNMEASURABLE: code4rena_audits" in b for b in r["findings"])
+
+    def test_olculemedi_in_an_older_run_only_is_ignored(self, tmp_path):
+        eski = dict(w._kaydir(w._SAGLAM, -20))
+        eski["sherlock_contests"] = dict(eski["sherlock_contests"], olculemedi="x")
+        s = kosu(ts(15), eski) + kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), w._SAGLAM)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == YESIL, r["findings"]

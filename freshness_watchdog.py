@@ -11,7 +11,8 @@ INDEPENDENT FAULT CLASSES ARE MEASURED (none of them can see the others):
   (1) STALENESS  — age of the last RECORD stamp (NOT the file mtime: a touched-but-unwritten
                    file produces a fake green; both are reported, the verdict uses the RECORD)
   (2) ZERO/NONE  — is any endpoint's load-bearing number 0/None/missing in the last run
-                   (= the schema broke)
+                   (= the schema broke), or does any summary of the last run carry the
+                   collector's own `olculemedi` (unmeasurable) reason
   (3) FROZEN     — how many consecutive runs returned the identical value (endpoint alive
                    but repeating itself)
   (+) MISSING    — does the last run carry fewer endpoints than expected (one dropped silently)
@@ -231,6 +232,8 @@ def denetle(seri: Path, simdi=None, onceki=None):
         if durum and durum != "OK":
             kirmizi.append("ENDPOINT-ERROR: %s status=%s" % (uc, durum))
         oz = k.get("ozet")
+        if isinstance(oz, dict) and oz.get("olculemedi"):
+            kirmizi.append("UNMEASURABLE: %s — %s" % (uc, str(oz["olculemedi"])[:200]))
         if isinstance(oz, dict):
             eksik_paket = sorted(p for p, v in oz.items() if isinstance(v, dict) and v.get("hata"))
             if eksik_paket:
