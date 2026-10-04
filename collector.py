@@ -39,6 +39,9 @@ UA = "Mozilla/5.0 (compatible; mergen-arz-olcum/0.3)"
 ZAMAN_ASIMI = 30
 SURUM = "0.3"
 
+# exit codes: 0 = every endpoint OK · KISMI = some endpoints OK · 1 = none OK
+KISMI = 3
+
 # OPEN-WINDOW WATCH: how many open entries are LISTED per record.
 # The count is always exact; this cap only bounds record size (the series is append-only).
 PENCERE_LISTE_TAVANI = 10
@@ -504,7 +507,9 @@ def main():
     if basarili < len(satirlar):
         print("ENDPOINT MISSING — read the `durum` field, do not trust the row count "
               "('exit=0 with zero content' is the trap this guards against).")
-    return 0 if basarili else 1
+    if basarili == len(satirlar) and satirlar:
+        return 0
+    return KISMI if basarili else 1
 
 
 if __name__ == "__main__":

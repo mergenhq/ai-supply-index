@@ -465,7 +465,7 @@ class TestMain:
             ("http", http, "n"),
             ("hata", patla, "n"),
         ])
-        assert c.main() == 0
+        assert c.main() == c.KISMI
         r = {k["uc"]: k for k in self.oku(seri)}
         assert [k["uc"] for k in self.oku(seri)] == ["ok", "ic", "liste", "http", "hata"]
         assert r["ok"] == {"zaman_utc": SIMDI.isoformat(timespec="seconds"), "surum": c.SURUM, "uc": "ok",
@@ -573,6 +573,27 @@ class TestNestedErrorStatus:
         monkeypatch.setattr(c, "UCLAR", [
             ("paket", lambda: {"a": {"toplam_30g": 5}, "b": {"hata": "HTTPError 429"}}, ""),
             ("temiz", lambda: {"a": {"toplam_30g": 5}}, "")])
-        assert c.main() == 0
+        assert c.main() == c.KISMI
         r = {json.loads(x)["uc"]: json.loads(x) for x in seri.read_text(encoding="utf-8").splitlines()}
         assert r["paket"]["durum"] == "HATA-ICERIDE" and r["temiz"]["durum"] == "OK"
+
+
+
+class TestExitCodes:
+    def kur(self, monkeypatch, tmp_path, uclar):
+        monkeypatch.setattr(c, "SERI", tmp_path / "seri.ndjson")
+        monkeypatch.setattr(c, "UCLAR", uclar)
+
+    def test_all_ok_is_0(self, monkeypatch, tmp_path, capsys):
+        self.kur(monkeypatch, tmp_path, [("a", lambda: {}, ""), ("b", lambda: {}, "")])
+        assert c.main() == 0
+
+    def test_partial_is_3(self, monkeypatch, tmp_path, capsys):
+        def patla():
+            raise OSError("x")
+        self.kur(monkeypatch, tmp_path, [("a", lambda: {}, ""), ("b", patla, "")])
+        assert c.main() == c.KISMI == 3
+
+    def test_none_ok_is_1(self, monkeypatch, tmp_path, capsys):
+        self.kur(monkeypatch, tmp_path, [("a", lambda: {"hata": "x"}, "")])
+        assert c.main() == 1

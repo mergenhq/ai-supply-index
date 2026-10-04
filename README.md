@@ -385,7 +385,7 @@ only way this series can be evaluated as a track record rather than as a claim.
 ## Reproduce it
 
 ```bash
-python3 collector.py             # one run, ~85 s, 11 endpoints, no credentials
+python3 collector.py             # one run, ~85 s, 11 endpoints, no credentials; exit 0=all OK 3=partial 1=none
 python3 freshness_watchdog.py    # audit the series: 0=green 1=yellow 2=red
 python3 to_english.py --english  # English-keyed mirror -> series-en.ndjson
 ```
@@ -396,7 +396,7 @@ python3 to_english.py --english  # English-keyed mirror -> series-en.ndjson
 | [`series-en.ndjson`](series-en.ndjson) | the same data with English keys, generated |
 | [`collector.py`](collector.py) | the collector, 11 endpoints |
 | [`freshness_watchdog.py`](freshness_watchdog.py) | the consumer that catches silent zeros |
-| [`run_weekly.sh`](run_weekly.sh) | collect → stamp → audit, as cron runs it |
+| [`run_weekly.sh`](run_weekly.sh) | collect → stamp → audit, as cron runs it; exit 1 = nothing collected, 2 = watchdog red, 3 = partial |
 | [`schema_map.json`](schema_map.json) | the key contract, source of the Schema table |
 | [`to_english.py`](to_english.py) | mirror generator + schema-table generator |
 
