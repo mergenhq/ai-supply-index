@@ -694,3 +694,17 @@ class TestMalformedInputPaths:
         assert e.value.code == 0
         out = capsys.readouterr().out
         assert out.startswith("usage: freshness_watchdog.py") and "--series" in out
+
+    @pytest.mark.parametrize("damga", [1724000000, 1.5, True, ["2026-08-18"], {"t": 1}])
+    def test_non_string_stamp_is_ignored_like_a_missing_stamp(self, tmp_path, damga):
+        s = kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), w._SAGLAM)
+        s.append(json.dumps({"zaman_utc": damga, "uc": "hf_models", "ozet": {}, "durum": "OK"}))
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == YESIL
+        assert r["run_count"] == 2 and r["last_record_utc"] == ts(1)
+
+    def test_only_non_string_stamps_is_red_unreadable(self, tmp_path):
+        s = [json.dumps({"zaman_utc": 1724000000, "uc": uc, "ozet": o}) for uc, o in w._SAGLAM.items()]
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI and r["run_count"] == 0
+        assert any("UNREADABLE" in b for b in r["findings"])

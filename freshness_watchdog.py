@@ -216,7 +216,9 @@ def denetle(seri: Path, simdi=None, onceki=None):
         return 2, r
 
     # ── (1) STALENESS ───────────────────────────────────────────────────────
-    damgalar = sorted({x.get("zaman_utc", "") for x in rows if x.get("zaman_utc")})
+    # a run stamp is a non-empty string; any other value counts as a missing stamp
+    damgalar = sorted({x["zaman_utc"] for x in rows
+                       if isinstance(x.get("zaman_utc"), str) and x["zaman_utc"]})
     son_damga = damgalar[-1] if damgalar else None
     r["last_record_utc"] = son_damga
     r["run_count"] = len(damgalar)
