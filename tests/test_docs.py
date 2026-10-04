@@ -73,3 +73,36 @@ def test_defillama_is_described_as_fees_not_revenue():
 def test_readme_describes_the_test_suite():
     assert "python3 -m pytest" in README
     assert "Every script self-tests" not in README
+
+
+# ── first-measurement table: every figure names the run it comes from ─────
+ILK_OLCUM = [
+    # (row label, endpoint, path into ozet, value as printed in the README)
+    ("DefiLlama (AI-Agents category)", "defillama_fees_ai_agents", ("ai_total30d",), 1177308.67),
+    ("→ concentration", "defillama_fees_ai_agents", ("ai_30g_dagilim", "top1_pay"), 0.8967),
+    ("Sherlock (security-audit contests)", "sherlock_leaderboard", ("omur_boyu_odeme", "toplam"), 15762894.38),
+    ("Sherlock contests", "sherlock_contests", ("acik_yarisma",), 0),
+    ("x402 (agent payment discovery)", "x402_discovery", ("kaynak_sayisi",), 15149),
+    ("Apify store", "apify_store", ("magaza_toplam_aktor",), 47257),
+    ("Hugging Face", "hf_models", ("indirme_dagilimi", "toplam"), 1580224158.0),
+    ("npm / PyPI", "npm_downloads", ("@anthropic-ai/sdk", "toplam_30g"), 115914002),
+    ("GitHub", "github_repos", ("Significant-Gravitas/AutoGPT", "yildiz"), 186664),
+]
+
+
+def test_first_measurement_rows_name_their_run_and_match_it():
+    satirlar = {ln.split("|")[1].strip(): ln for ln in README.splitlines() if ln.startswith("| ")}
+    kayit = {(r["zaman_utc"], r["uc"]): r for r in seri()}
+    for etiket, uc, yol, beklenen in ILK_OLCUM:
+        ln = satirlar[etiket]
+        m = re.search(r"`(2026-08-18T\d\d:\d\d:\d\dZ)`", ln)
+        assert m, "no run timestamp on row %r" % etiket
+        o = kayit[(m.group(1).replace("Z", "+00:00"), uc)]["ozet"]
+        for k in yol:
+            o = o[k]
+        assert o == beklenen, (etiket, o)
+
+
+def test_readme_has_no_stale_age_claims():
+    assert "days old" not in README
+    assert "Its rows enter the\nseries with the next weekly run" not in README
