@@ -360,6 +360,9 @@ be incomplete, so pick rows before building a time series:
   `olculemedi`, as missing data — never as a measured zero;
 - for a weekly series, keep the last usable row per endpoint and ISO week.
 
+A runnable version that prints one value per endpoint and week, with gaps shown as `GAP`, is
+[`examples/weekly_series.py`](examples/weekly_series.py) (`python3 examples/weekly_series.py --help`).
+
 ```python
 import json
 from datetime import datetime
