@@ -7,7 +7,7 @@ That is the classic "exit=0 with zero content" trap: cron is green, the file gro
 the load-bearing number is 0 — a fake green. A collector that silently returns zero is
 worse than one that visibly fails.
 
-FOUR INDEPENDENT FAULT CLASSES ARE MEASURED (none of them can see the others):
+INDEPENDENT FAULT CLASSES ARE MEASURED (none of them can see the others):
   (1) STALENESS  — age of the last RECORD stamp (NOT the file mtime: a touched-but-unwritten
                    file produces a fake green; both are reported, the verdict uses the RECORD)
   (2) ZERO/NONE  — is any endpoint's load-bearing number 0/None/missing in the last run
@@ -15,6 +15,10 @@ FOUR INDEPENDENT FAULT CLASSES ARE MEASURED (none of them can see the others):
   (3) FROZEN     — how many consecutive runs returned the identical value (endpoint alive
                    but repeating itself)
   (+) MISSING    — does the last run carry fewer endpoints than expected (one dropped silently)
+  (4) STALE-SOURCE — on the open-window endpoints, did even the newest listed entry start
+                   more than KAYNAK_ESKI_GUN days ago (the listing may no longer be updated)
+  (5) APPEND-ONLY — does the series still begin, byte for byte, with the newest snapshot
+                   under archive/ (no row changed, removed or reordered)
 
 EXIT CODE: 0=GREEN · 1=YELLOW · 2=RED   (usable directly in cron / `||` chains)
 
@@ -75,6 +79,12 @@ DONMUS_MIN_YAYILIM_GUN = 10
 
 KAYITLI_UC = 10
 
+# SOURCE FRESHNESS for the open-window endpoints: `en_yeni_baslangic_utc` is the start time
+# of the newest entry the platform lists. If even the newest entry started this long ago,
+# the listing itself may no longer be updated, and "0 open" would describe the listing,
+# not the platform. YELLOW, because a quiet quarter is possible; a human should check.
+KAYNAK_ESKI_GUN = 90
+
 # LOAD-BEARING NUMBER — the single value that decides whether an endpoint's row is full or empty.
 # All were MEASURED from the 2026-08-18 run; none of them was 0 (the smallest was 17), so a
 # 0/None here means the schema broke (there is no legitimate-zero scenario).
@@ -133,12 +143,26 @@ def _yas_gun(ts: str, simdi: datetime):
         return None
 
 
-def denetle(seri: Path, simdi=None):
-    """Measure all legs. Returns (code, report_dict). Code: 0 green / 1 yellow / 2 red."""
+def en_yeni_arsiv(seri: Path):
+    """Newest frozen snapshot under archive/ next to the series (names sort by UTC stamp)."""
+    adaylar = sorted((Path(seri).parent / "archive").glob("ai-arz-serisi-*.ndjson"))
+    return adaylar[-1] if adaylar else None
+
+
+def denetle(seri: Path, simdi=None, onceki=None):
+    """Measure all legs. Returns (code, report_dict). Code: 0 green / 1 yellow / 2 red.
+    `onceki`: a previously published snapshot the series must begin with, byte for byte."""
     simdi = simdi or datetime.now(timezone.utc)
     r = {"series": str(seri), "measured_utc": simdi.isoformat(timespec="seconds"),
          "findings": [], "severity": "GREEN"}
     kirmizi, sari = [], []
+
+    # ── (5) APPEND-ONLY: the series must extend the previous snapshot unchanged ──
+    if onceki is not None and Path(onceki).exists():
+        r["previous_snapshot"] = str(onceki)
+        if Path(seri).exists() and not Path(seri).read_bytes().startswith(Path(onceki).read_bytes()):
+            kirmizi.append("NOT-APPEND-ONLY: the series does not begin with %s byte for byte "
+                           "(rows were changed, removed or reordered)" % Path(onceki).name)
 
     # a line that is valid JSON but not an object (e.g. a bare `42`) cannot be a record:
     # skip it and report how many were skipped, instead of crashing on x.get()
@@ -150,6 +174,7 @@ def denetle(seri: Path, simdi=None):
     notlar = ["NOTE skipped %d non-object row(s) in the series" % atlanan] if atlanan else []
     if not rows:
         r["findings"].append("RED series is EMPTY or MISSING: %s" % seri)
+        r["findings"] += ["RED " + x for x in kirmizi]
         r["findings"] += notlar
         r["severity"] = "RED"
         return 2, r
@@ -208,6 +233,15 @@ def denetle(seri: Path, simdi=None):
             kirmizi.append("SILENT-ZERO: %s load-bearing number is 0 (schema broke; "
                            "in the 2026-08-18 measurement the smallest was 17)" % uc)
     r["last_run_carriers"] = tasiyici_son
+
+    # ── (4) SOURCE FRESHNESS (open-window endpoints) ───────────────────────
+    for k in son_kosu:
+        o = k.get("ozet")
+        bas = o.get("en_yeni_baslangic_utc") if isinstance(o, dict) else None
+        yas_bas = _yas_gun(bas, simdi) if isinstance(bas, str) else None
+        if yas_bas is not None and yas_bas > KAYNAK_ESKI_GUN:
+            sari.append("STALE-SOURCE: %s newest listed entry started %.0f days ago (%s); "
+                        "threshold %d d" % (k.get("uc", "?"), yas_bas, bas, KAYNAK_ESKI_GUN))
 
     # ── (3) FROZEN SERIES ───────────────────────────────────────────────────
     donmus = {}
@@ -406,6 +440,9 @@ def main():
                     help="append alarms to this NDJSON ledger (empty = do not write)")
     ap.add_argument("--json", action="store_true",
                     help="print the full report as JSON instead of text")
+    ap.add_argument("--previous", default="auto",
+                    help="snapshot the series must begin with (default: newest archive/ snapshot "
+                         "next to the series; empty = skip the check)")
     ap.add_argument("--self-test", dest="self_test", action="store_true",
                     help="make the watchdog bite itself first (fake-stale/zero/frozen must trip it)")
     a = ap.parse_args()
@@ -413,7 +450,8 @@ def main():
     if a.self_test:
         return oz_test()
 
-    kod, r = denetle(Path(a.series))
+    onceki = en_yeni_arsiv(Path(a.series)) if a.previous == "auto" else (Path(a.previous) if a.previous else None)
+    kod, r = denetle(Path(a.series), onceki=onceki)
     if a.json:
         print(json.dumps(r, ensure_ascii=False, indent=1))
     else:

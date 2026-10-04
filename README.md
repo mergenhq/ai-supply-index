@@ -53,11 +53,16 @@ already contains.
 - Runs **weekly, Mondays 07:00 UTC**, plus an **independent daily freshness watchdog at 07:30 UTC** —
   because a collector that silently returns zero is worse than one that visibly fails
 - Record structure is documented key by key in [**Schema**](#schema) below
-- Series is **OpenTimestamps-stamped** (`ai-arz-serisi.ndjson.ots`) so that "we measured this on that date"
-  is verifiable, not asserted. **Honest status:** the stamp is submitted to calendar servers; Bitcoin
-  anchoring takes hours, so `ots verify` reads *pending* until a block confirms it. Also: the series is
-  append-only, so each stamp covers the file **as of that commit** — earlier stamps do not validate later
-  files. Archived point-in-time snapshots with their own stamps are kept under `archive/` upstream.
+- Each publication is **OpenTimestamps-stamped**: the series is copied to a frozen, dated snapshot under
+  [`archive/`](archive/) and that snapshot is stamped next to it (`archive/ai-arz-serisi-<UTC stamp>.ndjson.ots`),
+  so that "we measured this on that date" is verifiable, not asserted. The newest snapshot is byte-identical
+  to `ai-arz-serisi.ndjson` at the time of publication. Each stamp covers its own snapshot only — the series
+  is append-only, so earlier stamps do not validate later files.
+  **Status:** a stamp is first submitted to calendar servers; Bitcoin anchoring takes hours, so `ots verify`
+  reads *pending* until a block confirms it.
+- `ai-arz-serisi.ndjson.ots` at the repository root is the stamp of the 2026-08-24 version of the series
+  (133 rows, sha256 `a1a625642dad9d91…`, commit `baee016`). It is kept as published; it does not cover the
+  current file. Use the newest proof under `archive/` instead.
 - A dated, append-only [**evidence record**](record/) of what this system measured about itself — negatives mandatory, entries never edited
 
 ### The silent-zero brake
@@ -141,6 +146,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `yarisma_sayisi` | `competition_count` | integer \| null | total competitions/audits the platform lists; null when unmeasurable |
 | `acik_yarisma` | `open_count` | integer \| null | how many are open right now (end time in the future); null when unmeasurable |
 | `acik_kamu` | `open_public_count` | integer \| null | of those, how many are open to the public (not private/invite-only) |
+| `en_yeni_baslangic_utc` | `newest_start_utc` | string (ISO-8601, UTC) \| null | start time of the newest entry the platform lists; if even this is months old, the listing itself may have stopped updating and the open count describes the listing, not the platform |
 | `acik_kapilar` | `open_entries` | array | the open ones themselves, soonest deadline first, capped at 10 per row to bound record size; the counts above are always exact |
 | `arena` | `arena` | string | which platform the entry came from: sherlock \| code4rena \| cantina |
 | `id` | `id` | string \| integer | platform's own identifier for the entry |
@@ -316,7 +322,7 @@ carry the meaning.
    These are **upper-tier samples, not medians** — treat them as such.
 3. **Schema fragility.** If an endpoint changes shape, a naive reader returns 0 silently. This happened to us
    on day one (`contests` vs `items`), which is why the freshness watchdog checks for silent zeros, frozen
-   counters and missing endpoints — not just staleness.
+   counters, missing endpoints and open-window listings whose newest entry is months old — not just staleness.
 4. **Eleven endpoints is not the supply side.** It is eleven measurable corners of it. Coverage will be stated
    with every expansion.
 5. **Short history.** As of this publication the series is **days old**. Its value compounds; it does not
@@ -328,6 +334,10 @@ carry the meaning.
    happens once ~6 runs have accumulated.
 7. **`cantina_competitions` is implemented and measured but not yet wired in.** It is present in
    `collector.py` and deliberately absent from the active endpoint list, so it produces no rows.
+8. **One reordering in the first week.** When the rows of the second collector were merged on 2026-08-24,
+   the 24 rows published on 2026-08-18 were kept but their order within each run changed, so the
+   2026-08-18 file is not a byte prefix of later files. Every publication since then extends the previous
+   one unchanged, and the watchdog now checks this against the newest snapshot under `archive/`.
 
 ---
 
@@ -359,8 +369,11 @@ Use the data freely, including commercially — attribution is the only conditio
 ```
 AI Supply Index (2026). Weekly timestamped measurement of the AI economy's supply side.
 mergenhq. https://github.com/mergenhq/ai-supply-index
-— accessed YYYY-MM-DD, series stamp sha256:681d8310e3249352…
+— accessed YYYY-MM-DD, snapshot archive/ai-arz-serisi-20260928T074103Z.ndjson, sha256:171798127f984121…
 ```
+
+Cite the newest snapshot under `archive/` at the time you accessed the data, with the first 16 hex characters
+of its sha256 (`sha256sum archive/<file>`); that snapshot's `.ots` proof sits next to it.
 
 A single citation format is deliberate: it makes attribution countable, which is the
 only way this series can be evaluated as a track record rather than as a claim.

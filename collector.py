@@ -158,6 +158,14 @@ def _iso_epoch(s):
         return None
 
 
+def _en_yeni(epochlar):
+    """Newest of the given epoch values as ISO-8601 UTC, or None when none is numeric."""
+    e = [x for x in epochlar if isinstance(x, (int, float))]
+    if not e:
+        return None
+    return datetime.fromtimestamp(max(e), timezone.utc).isoformat(timespec="seconds")
+
+
 def _kapi(kaynak, kimlik, baslik, biter_ep, kamu, odul=None, url=None, etiket=None):
     return {"arena": kaynak, "id": kimlik, "baslik": str(baslik)[:120], "kamu": bool(kamu),
             "biter_utc": datetime.fromtimestamp(biter_ep, timezone.utc).isoformat(timespec="seconds"),
@@ -219,6 +227,7 @@ def uc_sherlock_contests():
     acik.sort(key=lambda x: x["kalan_gun"])
     return {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
             "sayfa_alani": sayfa_alani,
+            "en_yeni_baslangic_utc": _en_yeni(i.get("starts_at") for i in ogeler),
             "acik_yarisma": len(acik), "acik_kamu": len(kamu),
             "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
 
@@ -269,6 +278,7 @@ def uc_code4rena_audits():
     acik.sort(key=lambda x: x["kalan_gun"])
     return {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
             "son_sayfa_alani": son_sayfa,
+            "en_yeni_baslangic_utc": _en_yeni(_iso_epoch(a.get("startTime")) for a in ogeler),
             "acik_yarisma": len(acik), "acik_kamu": len(kamu),
             "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
 
@@ -309,6 +319,8 @@ def uc_cantina_competitions():
             kamu.append(kapi)
     acik.sort(key=lambda x: x["kalan_gun"])
     return {"yarisma_sayisi": len(d), "sayfa_ogesi": len(d), "sayfa": 1,
+            "en_yeni_baslangic_utc": _en_yeni(_iso_epoch((x.get("timeframe") or {}).get("start"))
+                                              for x in d if isinstance(x, dict)),
             "acik_yarisma": len(acik), "acik_kamu": len(kamu),
             "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
 
