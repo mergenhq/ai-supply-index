@@ -198,7 +198,7 @@ def denetle(seri: Path, simdi=None, onceki=None):
                            "(rows were changed, removed or reordered)" % Path(onceki).name)
 
     # a line that is valid JSON but not an object (e.g. a bare `42`) cannot be a record:
-    # skip it and report how many were skipped, instead of crashing on x.get()
+    # it is skipped, and the number of skipped lines is reported
     ham, bozuk = kayitlar_ve_bozuk(Path(seri))
     r["unparseable_rows"] = bozuk
     if bozuk:
@@ -240,8 +240,8 @@ def denetle(seri: Path, simdi=None, onceki=None):
 
     # ── records belonging to the last run ───────────────────────────────────
     son_kosu = [x for x in rows if x.get("zaman_utc") == son_damga]
-    # count DISTINCT expected endpoint names, not records: a duplicated row or an extra,
-    # untracked endpoint (e.g. cantina_competitions) must not hide one that dropped
+    # the count is the number of DISTINCT expected endpoint names, so a duplicated row or an
+    # extra, untracked endpoint (e.g. cantina_competitions) cannot stand in for a missing one
     son_ucler = {x.get("uc") for x in son_kosu} & set(TASIYICILAR)
     r["last_run_endpoint_count"] = len(son_ucler)
 

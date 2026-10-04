@@ -386,10 +386,10 @@ class TestMain:
         assert "10 passed / 0 failed" in capsys.readouterr().out
 
 
-# ── regressions for the two verified bugs ───────────────────────────────────
-class TestH1NonObjectRows:
-    """H1: a line that is valid JSON but not an object (e.g. a bare `42`) crashed denetle()
-    with AttributeError. Expected: skipped, counted in the report, no crash."""
+# ── non-object rows and distinct endpoint counting ──────────────────────────
+class TestNonObjectRows:
+    """A line that is valid JSON but not an object (e.g. a bare `42`) is skipped and counted
+    in the report; the verdict is computed from the remaining records."""
 
     @pytest.mark.parametrize("bozuk", ["42", '"metin"', "[1, 2]", "null", "true"])
     def test_non_object_row_is_skipped_and_counted(self, tmp_path, bozuk):
@@ -405,7 +405,7 @@ class TestH1NonObjectRows:
         kod, r = w.denetle(seri(tmp_path, s), SIMDI)
         assert kod == YESIL and r["skipped_non_object_rows"] == 3
 
-    def test_skip_does_not_mask_a_real_alarm(self, tmp_path):
+    def test_real_alarm_still_reported_alongside_skipped_rows(self, tmp_path):
         o = dict(w._SAGLAM, hf_models={"indirme_dagilimi": {"toplam": 0}})
         kod, r = w.denetle(seri(tmp_path, kosu(ts(1), o) + ["42"]), SIMDI)
         assert kod == KIRMIZI and r["skipped_non_object_rows"] == 1
@@ -421,11 +421,10 @@ class TestH1NonObjectRows:
         assert not any("non-object" in b for b in r["findings"])
 
 
-class TestH2DistinctEndpoints:
-    """H2: the last run's endpoint count was len(records), so a dropped endpoint hidden by a
-    duplicate of another one read as 10/10 GREEN. Expected: distinct endpoint names count."""
+class TestDistinctEndpoints:
+    """The last run's endpoint count is the number of distinct expected endpoint names."""
 
-    def test_dropped_endpoint_masked_by_duplicate_is_red(self, tmp_path):
+    def test_missing_endpoint_is_red_when_another_row_is_duplicated(self, tmp_path):
         o = {k: v for k, v in w._SAGLAM.items() if k != "hf_models"}
         s = kosu(ts(1), o) + kosu(ts(1), {"github_repos": w._SAGLAM["github_repos"]})
         kod, r = w.denetle(seri(tmp_path, s), SIMDI)
@@ -434,8 +433,8 @@ class TestH2DistinctEndpoints:
         b = [x for x in r["findings"] if "MISSING-ENDPOINT" in x]
         assert b and "10/11" in b[0] and "dropped=hf_models" in b[0]
 
-    def test_dropped_endpoint_masked_by_untracked_endpoint_is_red(self, tmp_path):
-        # an extra row from an endpoint that is not a tracked carrier must not fill the gap
+    def test_missing_endpoint_is_red_when_an_untracked_row_is_present(self, tmp_path):
+        # only tracked carriers count towards the expected endpoints
         o = {k: v for k, v in w._SAGLAM.items() if k != "apify_store"}
         s = kosu(ts(1), o) + [satir(ts(1), "cantina_competitions", {"yarisma_sayisi": 144})]
         kod, r = w.denetle(seri(tmp_path, s), SIMDI)
