@@ -515,7 +515,9 @@ def main():
         print("AI SUPPLY INDEX — FRESHNESS WATCHDOG — %s" % r["severity"])
         print("  series=%s records=%s runs=%s" % (r["series"], r.get("record_count"), r.get("run_count")))
         print("  last record=%s (age %.2f days) · file-mtime age=%s days"
-              % (r.get("last_record_utc"), r.get("record_age_days") or -1, r.get("file_mtime_age_days")))
+              % (r.get("last_record_utc"),
+                 -1 if r.get("record_age_days") is None else r["record_age_days"],
+                 r.get("file_mtime_age_days")))
         for b in r["findings"]:
             print("  - %s" % b)
     if a.ledger:

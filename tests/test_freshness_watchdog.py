@@ -708,3 +708,17 @@ class TestMalformedInputPaths:
         kod, r = w.denetle(seri(tmp_path, s), SIMDI)
         assert kod == KIRMIZI and r["run_count"] == 0
         assert any("UNREADABLE" in b for b in r["findings"])
+
+    def test_text_output_prints_a_zero_record_age_as_zero(self, tmp_path, monkeypatch, capsys):
+        yol = seri(tmp_path, kosu(ts(0), w._SAGLAM))
+        monkeypatch.setattr(w, "datetime", sabit_datetime(SIMDI))
+        monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--series", str(yol), "--previous", ""])
+        assert w.main() == 0
+        assert "(age 0.00 days)" in capsys.readouterr().out
+
+    def test_text_output_marks_an_unreadable_record_age(self, tmp_path, monkeypatch, capsys):
+        yol = seri(tmp_path, kosu("bozuk-damga", w._SAGLAM))
+        monkeypatch.setattr(w, "datetime", sabit_datetime(SIMDI))
+        monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--series", str(yol), "--previous", ""])
+        assert w.main() == 2
+        assert "(age -1.00 days)" in capsys.readouterr().out
