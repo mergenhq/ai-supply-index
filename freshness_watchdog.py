@@ -240,6 +240,10 @@ def denetle(seri: Path, simdi=None, onceki=None):
         if isinstance(oz, dict) and oz.get("olculemedi"):
             kirmizi.append("UNMEASURABLE: %s — %s" % (uc, str(oz["olculemedi"])[:200]))
         if isinstance(oz, dict):
+            for p_, v in sorted(oz.items()):
+                if isinstance(v, dict) and v.get("olculemedi"):
+                    kirmizi.append("UNMEASURABLE: %s/%s — %s" % (uc, p_, str(v["olculemedi"])[:200]))
+        if isinstance(oz, dict):
             eksik_paket = sorted(p for p, v in oz.items() if isinstance(v, dict) and v.get("hata"))
             if eksik_paket:
                 kirmizi.append("PARTIAL: %s has errors inside the summary for %s"

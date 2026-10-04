@@ -54,6 +54,12 @@ GH_DEPOLAR = ["langchain-ai/langchain", "anthropics/anthropic-sdk-python",
               "Significant-Gravitas/AutoGPT"]
 LLAMA_PROTOKOL = "virtuals-protocol"   # 89.7 % of the AI-Agents category
 X402_SAYFA_TAVANI = 60                 # 60*500 = 30,000 resources; safety brake
+YARISMA_SAYFA_TAVANI = 40              # Sherlock (100/page) and Code4rena (25/page) safety brake
+
+
+def _tavan_notu(sayfa, toplam):
+    return ("page cap reached: walked %d pages, the API reports %s items in total; "
+            "the summary covers only the pages walked" % (sayfa, toplam))
 
 
 # ------------------------------------------------------------------- helpers
@@ -125,10 +131,13 @@ def uc_x402():
             break
         time.sleep(0.25)
     ilk_uc.sort(key=lambda x: -x[0])
-    return {"kaynak_sayisi": toplam, "taranan": len(cagri), "sayfa": sayfa,
-            "cagri_30g": dagilim_ozeti(cagri, [1, 10, 100, 1000, 10000]),
-            "odeyen_30g": dagilim_ozeti(odeyen, [1, 2, 5, 10, 100]),
-            "top10_cagri": [{"cagri": c, "kaynak": r} for c, r in ilk_uc[:10]]}
+    o = {"kaynak_sayisi": toplam, "taranan": len(cagri), "sayfa": sayfa,
+         "cagri_30g": dagilim_ozeti(cagri, [1, 10, 100, 1000, 10000]),
+         "odeyen_30g": dagilim_ozeti(odeyen, [1, 2, 5, 10, 100]),
+         "top10_cagri": [{"cagri": c, "kaynak": r} for c, r in ilk_uc[:10]]}
+    if sayfa >= X402_SAYFA_TAVANI and ogeler and (toplam is None or sayfa * 500 < toplam):
+        o["olculemedi"] = _tavan_notu(sayfa, toplam)
+    return o
 
 
 def uc_sherlock_leaderboard():
@@ -193,7 +202,7 @@ def uc_sherlock_contests():
     """
     simdi = int(time.time())
     ogeler, toplam, sayfa, sayfa_alani = [], None, 0, None
-    while sayfa < 40:
+    while sayfa < YARISMA_SAYFA_TAVANI:
         _, d = cek("https://mainnet-contest.sherlock.xyz/contests?per_page=100&page=%d" % (sayfa + 1))
         if not isinstance(d, dict) or "items" not in d:
             return {"yarisma_sayisi": None, "sayfa_ogesi": 0, "sayfa": sayfa,
@@ -228,11 +237,14 @@ def uc_sherlock_contests():
         if k:
             kamu.append(kapi)
     acik.sort(key=lambda x: x["kalan_gun"])
-    return {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
-            "sayfa_alani": sayfa_alani,
-            "en_yeni_baslangic_utc": _en_yeni(i.get("starts_at") for i in ogeler),
-            "acik_yarisma": len(acik), "acik_kamu": len(kamu),
-            "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
+    o = {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
+         "sayfa_alani": sayfa_alani,
+         "en_yeni_baslangic_utc": _en_yeni(i.get("starts_at") for i in ogeler),
+         "acik_yarisma": len(acik), "acik_kamu": len(kamu),
+         "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
+    if sayfa >= YARISMA_SAYFA_TAVANI and d.get("has_next"):
+        o["olculemedi"] = _tavan_notu(sayfa, toplam)
+    return o
 
 
 def uc_code4rena_audits():
@@ -244,7 +256,7 @@ def uc_code4rena_audits():
     but no verdict depends on ordering — all 19 pages are walked."""
     simdi = int(time.time())
     ogeler, toplam, sayfa, son_sayfa = [], None, 0, None
-    while sayfa < 40:
+    while sayfa < YARISMA_SAYFA_TAVANI:
         _, d = cek("https://code4rena.com/api/v1/audits?page=%d" % (sayfa + 1))
         au = ((d or {}).get("data") or {}).get("audits") if isinstance(d, dict) else None
         if not isinstance(au, list):
@@ -279,11 +291,14 @@ def uc_code4rena_audits():
         if k:
             kamu.append(kapi)
     acik.sort(key=lambda x: x["kalan_gun"])
-    return {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
-            "son_sayfa_alani": son_sayfa,
-            "en_yeni_baslangic_utc": _en_yeni(_iso_epoch(a.get("startTime")) for a in ogeler),
-            "acik_yarisma": len(acik), "acik_kamu": len(kamu),
-            "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
+    o = {"yarisma_sayisi": toplam, "sayfa_ogesi": len(ogeler), "sayfa": sayfa,
+         "son_sayfa_alani": son_sayfa,
+         "en_yeni_baslangic_utc": _en_yeni(_iso_epoch(a.get("startTime")) for a in ogeler),
+         "acik_yarisma": len(acik), "acik_kamu": len(kamu),
+         "acik_kapilar": acik[:PENCERE_LISTE_TAVANI]}
+    if sayfa >= YARISMA_SAYFA_TAVANI and pg.get("nextPage"):
+        o["olculemedi"] = _tavan_notu(sayfa, toplam)
+    return o
 
 
 def uc_cantina_competitions():
@@ -409,10 +424,15 @@ def uc_npm():
             _, d = cek("https://api.npmjs.org/downloads/range/last-month/%s"
                        % urllib.parse.quote(pkt, safe=""))
             gunler = d.get("downloads", [])
+            sayili = [g["downloads"] for g in gunler
+                      if isinstance(g, dict) and isinstance(g.get("downloads"), (int, float))]
             cikti[pkt] = {"baslangic": d.get("start"), "bitis": d.get("end"),
                           "gun": len(gunler),
-                          "toplam_30g": sum(g.get("downloads", 0) for g in gunler),
+                          "toplam_30g": sum(sayili),
                           "son_gun": gunler[-1] if gunler else None}
+            if len(sayili) < len(gunler):
+                cikti[pkt]["olculemedi"] = ("%d of %d day records have no numeric downloads"
+                                            % (len(gunler) - len(sayili), len(gunler)))
         except Exception as e:
             cikti[pkt] = {"hata": repr(e)[:120]}
         time.sleep(0.5)
@@ -427,11 +447,18 @@ def uc_pypi():
             _, d = cek("https://pypistats.org/api/packages/%s/overall" % pkt)
             veri = d.get("data", [])
             wo = [x for x in veri if x.get("category") == "without_mirrors"]
+
+            def say(x):
+                return x["downloads"] if isinstance(x.get("downloads"), (int, float)) else 0
             cikti[pkt] = {"kayit": len(veri), "aynasiz_gun": len(wo),
                           "ilk_tarih": veri[0].get("date") if veri else None,
                           "son_tarih": veri[-1].get("date") if veri else None,
-                          "aynasiz_toplam": sum(x.get("downloads", 0) for x in wo),
-                          "aynasiz_son30g": sum(x.get("downloads", 0) for x in wo[-30:])}
+                          "aynasiz_toplam": sum(say(x) for x in wo),
+                          "aynasiz_son30g": sum(say(x) for x in wo[-30:])}
+            eksik = sum(1 for x in wo if not isinstance(x.get("downloads"), (int, float)))
+            if eksik:
+                cikti[pkt]["olculemedi"] = ("%d of %d non-mirror rows have no numeric downloads"
+                                            % (eksik, len(wo)))
         except Exception as e:
             cikti[pkt] = {"hata": repr(e)[:120]}
         time.sleep(2)

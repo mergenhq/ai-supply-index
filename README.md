@@ -139,7 +139,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `son_sayfa_alani` | `last_page_reported` | integer | last-page number the API reported (Code4rena) |
 | `taranan` | `scanned` | integer | how many items yielded a usable numeric value |
 | `kapsam_notu` | `coverage_note` | string | explicit statement of what this sample is and is not (e.g. upper tier, not a median) |
-| `olculemedi` | `unmeasurable` | string (reason) | PRESENT ONLY WHEN THE SCHEMA BROKE. If this key exists, the accompanying value is NOT zero — it is UNKNOWN. The collector refuses to silently count 0 when a response changes shape; it records why instead. Treat a row carrying `unmeasurable` as missing data, never as a measured zero. |
+| `olculemedi` | `unmeasurable` | string (reason) | PRESENT ONLY WHEN THE MEASUREMENT IS INCOMPLETE: the schema broke, a page cap was reached, or values were missing (also inside a per-package sub-summary). If this key exists, the accompanying value is NOT zero — it is UNKNOWN. The collector refuses to silently count 0 when a response changes shape; it records why instead. Treat a row carrying `unmeasurable` as missing data, never as a measured zero. |
 
 #### Open-window watch
 
