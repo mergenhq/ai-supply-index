@@ -56,7 +56,7 @@
         ["maks", "max", "number", "largest single value"],
         ["histogram", "histogram", "object", "bucket label -> count; bucket labels are data (see passthrough)"],
         ["top1_pay", "top1_share", "number (0-1)", "share of the total held by the single largest value — the concentration measure"],
-        ["top10_pay", "top10_share", "number (0-1)", "share of the total held by the ten largest values"]
+        ["top10_pay", "top10_share", "number (0-1)", "share of the total held by the ten largest values; it is 1.0 by construction whenever there are ten or fewer non-zero values (n minus zero_count)"]
       ]
     },
     {
@@ -178,7 +178,7 @@
     },
     {
       "name": "PyPI downloads",
-      "note": "Per-package download volume excluding mirror traffic. The upstream window is roughly 362 days, so old data falls off.",
+      "note": "Per-package download volume excluding mirror traffic. The upstream window is roughly 183 days (about six months), so old data falls off. `non_mirror_total` is the sum over that rolling window, not an all-time total.",
       "keys": [
         ["kayit", "records", "integer", "rows returned for the package"],
         ["aynasiz_gun", "non_mirror_days", "integer", "rows in the without_mirrors category"],

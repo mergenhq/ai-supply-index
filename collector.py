@@ -52,7 +52,7 @@ PYPI_PAKETLER = ["anthropic", "openai", "langchain", "crewai"]
 GH_DEPOLAR = ["langchain-ai/langchain", "anthropics/anthropic-sdk-python",
               "crewAIInc/crewAI", "modelcontextprotocol/servers",
               "Significant-Gravitas/AutoGPT"]
-LLAMA_PROTOKOL = "virtuals-protocol"   # 89.7 % of the AI-Agents category
+LLAMA_PROTOKOL = "virtuals-protocol"   # fixed: the largest AI-Agents protocol on 2026-08-18 (89.7 %); not re-selected per run
 X402_SAYFA_TAVANI = 60                 # 60*500 = 30,000 resources; safety brake
 YARISMA_SAYFA_TAVANI = 40              # Sherlock (100/page) and Code4rena (25/page) safety brake
 
@@ -363,7 +363,8 @@ def uc_defillama_kategori():
 
 
 def uc_defillama_protokol():
-    """Daily revenue series for a single protocol (~671 days archived). The centre of concentration."""
+    """Daily fee series for one FIXED protocol (LLAMA_PROTOKOL, ~671 days archived). It was the
+    largest in the AI-Agents category when chosen; whether it still is, read ai_top5_30d."""
     _, d = cek("https://api.llama.fi/summary/fees/%s" % LLAMA_PROTOKOL)
     tdc = d.get("totalDataChart") or []
     son30 = [v for _, v in tdc[-30:] if isinstance(v, (int, float))]
@@ -441,12 +442,14 @@ def uc_npm():
 
 
 def uc_pypi():
-    """~362-day window -> old data falls off. STRICT rate limit: wait 2 s between packages."""
+    """~180-day window (pypistats keeps about six months) -> old data falls off.
+    Rows are ordered by date before the first/last date and the last-30-day sum are taken.
+    STRICT rate limit: wait 2 s between packages."""
     cikti = {}
     for pkt in PYPI_PAKETLER:
         try:
             _, d = cek("https://pypistats.org/api/packages/%s/overall" % pkt)
-            veri = d.get("data", [])
+            veri = sorted(d.get("data", []), key=lambda x: str(x.get("date") or ""))
             wo = [x for x in veri if x.get("category") == "without_mirrors"]
 
             def say(x):
@@ -496,11 +499,11 @@ UCLAR = [
     # Arena 2 of the open-window watch: open entries are not a Sherlock-only phenomenon.
     ("code4rena_audits",          uc_code4rena_audits,     "audit metadata + OPEN-WINDOW watch; all 19 pages walked"),
     ("defillama_fees_ai_agents",  uc_defillama_kategori,   "AI Agents category cross-section"),
-    ("defillama_summary_virtuals",uc_defillama_protokol,   "the centre of concentration; daily series archived"),
+    ("defillama_summary_virtuals",uc_defillama_protokol,   "fixed protocol (largest on 2026-08-18); daily series archived"),
     ("apify_store",               uc_apify_store,          "users per actor; 7/30/90d SLIDING window = data falls off"),
     ("hf_models",                 uc_hf_modeller,          "cumulative downloads; no official HISTORICAL endpoint"),
     ("npm_downloads",             uc_npm,                  "clipped to ~547 days = old data falls off"),
-    ("pypi_downloads",            uc_pypi,                 "~362-day window = old data falls off"),
+    ("pypi_downloads",            uc_pypi,                 "~180-day window = old data falls off"),
     ("github_repos",              uc_github,               "point-in-time snapshot; no historical star series"),
 ]
 
