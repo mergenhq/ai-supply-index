@@ -6,7 +6,8 @@ The supply side — who is actually earning, and how concentrated those earnings
 measured far less often, and several of these endpoints KEEP NO HISTORY: a snapshot not
 taken this week cannot be reconstructed later.
 
-No authentication. Read-only. The only file written is the series next to this script.
+No authentication. Read-only. The only file written is the series next to this script
+(or the file given with --out).
 
 DESIGN NOTES
   - v0.1 counted only TOTALS and threw the DISTRIBUTION away. But the finding lives in the
@@ -29,7 +30,7 @@ Internal identifiers and the published JSON keys remain Turkish — the keys are
 series continuity. See the Schema section of README.md for the full key map, and use
 `to_english.py` to generate an English-keyed mirror of the series.
 """
-import json, math, os, sys, time, urllib.request, urllib.error, urllib.parse
+import argparse, json, math, os, sys, time, urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -508,7 +509,14 @@ UCLAR = [
 ]
 
 
-def main():
+def main(argv=()):
+    ap = argparse.ArgumentParser(description="Collect one run of the AI Supply Index and append it to "
+                                             "the series. Exit code: 0=all OK 3=partial 1=none.")
+    ap.add_argument("--out", default="",
+                    help="append to this file instead of the published series (use this to reproduce "
+                         "a run without changing ai-arz-serisi.ndjson)")
+    a = ap.parse_args(list(argv))
+    hedef = Path(a.out) if a.out else SERI
     simdi = datetime.now(timezone.utc).isoformat(timespec="seconds")
     # which collector wrote the row, when more than one runs: set AI_ARZ_TOPLAYICI on each host
     toplayici = os.environ.get("AI_ARZ_TOPLAYICI", "").strip()[:40]
@@ -529,12 +537,12 @@ def main():
         satirlar.append(kayit)
         print("  %-28s %-12s %5.1fs" % (ad, kayit["durum"], kayit["saniye"]))
 
-    with open(SERI, "a", encoding="utf-8") as f:
+    with open(hedef, "a", encoding="utf-8") as f:
         for s in satirlar:
             f.write(json.dumps(s, ensure_ascii=False) + "\n")
 
     basarili = sum(1 for s in satirlar if s["durum"] == "OK")
-    print("\nwritten: %s  (%d/%d endpoints OK)" % (SERI, basarili, len(satirlar)))
+    print("\nwritten: %s  (%d/%d endpoints OK)" % (hedef, basarili, len(satirlar)))
     if basarili < len(satirlar):
         print("ENDPOINT MISSING — read the `durum` field, do not trust the row count "
               "('exit=0 with zero content' is the trap this guards against).")
@@ -544,4 +552,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
