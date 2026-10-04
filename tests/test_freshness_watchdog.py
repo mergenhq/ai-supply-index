@@ -119,12 +119,12 @@ class TestDenetle:
     def test_healthy_is_green(self, tmp_path):
         kod, r = w.denetle(saglikli(tmp_path), SIMDI)
         assert kod == YESIL and r["severity"] == "GREEN"
-        assert r["record_count"] == 30 and r["run_count"] == 3
-        assert r["last_run_endpoint_count"] == 10
+        assert r["record_count"] == 3 * w.KAYITLI_UC and r["run_count"] == 3
+        assert r["last_run_endpoint_count"] == w.KAYITLI_UC == 11
         assert r["record_age_days"] == pytest.approx(1.0)
         assert r["file_mtime_age_days"] == pytest.approx(1.0)
         assert r["findings"][-1].startswith("GREEN")
-        assert "10/10 endpoints populated" in r["findings"][-1]
+        assert "11/11 endpoints populated" in r["findings"][-1]
         assert set(r["last_run_carriers"]) == set(w.TASIYICILAR)
 
     def test_default_now_uses_wall_clock_but_is_injectable(self, tmp_path, monkeypatch):
@@ -148,7 +148,7 @@ class TestDenetle:
 
     def test_invalid_json_line_is_red_and_counted(self, tmp_path):
         kod, r = w.denetle(saglikli(tmp_path, extra=["{yarim satir", "not json"]), SIMDI)
-        assert kod == KIRMIZI and r["record_count"] == 30 and r["unparseable_rows"] == 2
+        assert kod == KIRMIZI and r["record_count"] == 3 * w.KAYITLI_UC and r["unparseable_rows"] == 2
         assert any("UNPARSEABLE: 2 line(s)" in b for b in r["findings"])
 
     def test_clean_series_reports_zero_unparseable(self, tmp_path):
@@ -210,13 +210,13 @@ class TestDenetle:
         kod, r = w.denetle(seri(tmp_path, kosu(ts(1), eksik)), SIMDI)
         assert kod == KIRMIZI
         b = [x for x in r["findings"] if "MISSING-ENDPOINT" in x][0]
-        assert "8/10" in b and "dropped=apify_store,hf_models" in b
+        assert "9/11" in b and "dropped=apify_store,hf_models" in b
 
     def test_extra_unknown_endpoint_is_tolerated(self, tmp_path):
-        extra = [satir(ts(1), "code4rena_audits", {"yarisma_sayisi": 475})]
+        extra = [satir(ts(1), "cantina_competitions", {"yarisma_sayisi": 144})]
         kod, r = w.denetle(saglikli(tmp_path, extra=extra), SIMDI)
         assert kod == YESIL
-        assert "code4rena_audits" not in r["last_run_carriers"]
+        assert "cantina_competitions" not in r["last_run_carriers"]
 
     @pytest.mark.parametrize("durum", ["HTTP-HATA", "HATA", "HATA-ICERIDE"])
     def test_endpoint_error_status_is_red(self, tmp_path, durum):
@@ -272,7 +272,7 @@ class TestDonmus:
         kod, r = w.denetle(seri(tmp_path, s), SIMDI)
         assert kod == SARI
         assert r["consecutive_identical"]["hf_models"] == 3
-        assert sum("FROZEN" in b for b in r["findings"]) == 10
+        assert sum("FROZEN" in b for b in r["findings"]) == w.KAYITLI_UC
 
     def test_spread_exactly_at_threshold_is_frozen(self, tmp_path):
         s = (kosu(ts(1 + w.DONMUS_MIN_YAYILIM_GUN), w._SAGLAM)
@@ -395,7 +395,7 @@ class TestH1NonObjectRows:
     def test_non_object_row_is_skipped_and_counted(self, tmp_path, bozuk):
         kod, r = w.denetle(saglikli(tmp_path, extra=[bozuk]), SIMDI)
         assert kod == YESIL
-        assert r["record_count"] == 30
+        assert r["record_count"] == 3 * w.KAYITLI_UC
         assert r["skipped_non_object_rows"] == 1
         assert any("1 non-object row" in b for b in r["findings"])
 
@@ -430,14 +430,14 @@ class TestH2DistinctEndpoints:
         s = kosu(ts(1), o) + kosu(ts(1), {"github_repos": w._SAGLAM["github_repos"]})
         kod, r = w.denetle(seri(tmp_path, s), SIMDI)
         assert kod == KIRMIZI
-        assert r["last_run_endpoint_count"] == 9
+        assert r["last_run_endpoint_count"] == 10
         b = [x for x in r["findings"] if "MISSING-ENDPOINT" in x]
-        assert b and "9/10" in b[0] and "dropped=hf_models" in b[0]
+        assert b and "10/11" in b[0] and "dropped=hf_models" in b[0]
 
     def test_dropped_endpoint_masked_by_untracked_endpoint_is_red(self, tmp_path):
-        # the real collector writes 11 rows per run (code4rena_audits is not a tracked carrier)
+        # an extra row from an endpoint that is not a tracked carrier must not fill the gap
         o = {k: v for k, v in w._SAGLAM.items() if k != "apify_store"}
-        s = kosu(ts(1), o) + [satir(ts(1), "code4rena_audits", {"yarisma_sayisi": 475})]
+        s = kosu(ts(1), o) + [satir(ts(1), "cantina_competitions", {"yarisma_sayisi": 144})]
         kod, r = w.denetle(seri(tmp_path, s), SIMDI)
         assert kod == KIRMIZI
         assert any("dropped=apify_store" in b for b in r["findings"])
@@ -445,12 +445,12 @@ class TestH2DistinctEndpoints:
     def test_duplicates_with_all_endpoints_present_stay_green(self, tmp_path):
         extra = kosu(ts(1), {"github_repos": w._SAGLAM["github_repos"]})
         kod, r = w.denetle(saglikli(tmp_path, extra=extra), SIMDI)
-        assert kod == YESIL and r["last_run_endpoint_count"] == 10
+        assert kod == YESIL and r["last_run_endpoint_count"] == 11
 
-    def test_real_shaped_run_with_eleven_rows_is_10_of_10(self, tmp_path):
-        extra = [satir(ts(1), "code4rena_audits", {"yarisma_sayisi": 475})]
+    def test_extra_untracked_row_does_not_raise_the_count(self, tmp_path):
+        extra = [satir(ts(1), "cantina_competitions", {"yarisma_sayisi": 144})]
         kod, r = w.denetle(saglikli(tmp_path, extra=extra), SIMDI)
-        assert kod == YESIL and r["last_run_endpoint_count"] == 10
+        assert kod == YESIL and r["last_run_endpoint_count"] == 11
 
 
 class TestStaleSource:
@@ -556,9 +556,9 @@ class TestUnmeasurable:
         assert any("UNMEASURABLE: sherlock_contests" in b and "ends_at" in b for b in r["findings"])
 
     def test_untracked_endpoint_olculemedi_is_red_too(self, tmp_path):
-        ek = kosu(ts(1), {"code4rena_audits": {"yarisma_sayisi": None, "olculemedi": "schema broken"}})
+        ek = kosu(ts(1), {"cantina_competitions": {"yarisma_sayisi": None, "olculemedi": "schema broken"}})
         kod, r = w.denetle(saglikli(tmp_path, extra=ek), SIMDI)
-        assert kod == KIRMIZI and any("UNMEASURABLE: code4rena_audits" in b for b in r["findings"])
+        assert kod == KIRMIZI and any("UNMEASURABLE: cantina_competitions" in b for b in r["findings"])
 
     def test_olculemedi_in_an_older_run_only_is_ignored(self, tmp_path):
         eski = dict(w._kaydir(w._SAGLAM, -20))
@@ -589,3 +589,65 @@ class TestCarrierChoice:
         _, r = w.denetle(seri(tmp_path, s), SIMDI)
         assert all("calibration debt" not in b for b in r["findings"])
         assert any("derived from %d runs" % w.DONMUS_TURETME_KOSU in b for b in r["findings"])
+
+
+# ── code4rena_audits is a guarded endpoint ──────────────────────────────────
+class TestCode4renaGuarded:
+    def test_is_a_carrier(self):
+        assert w.TASIYICILAR["code4rena_audits"]({"yarisma_sayisi": 475}) == 475
+        assert w.TASIYICILAR["code4rena_audits"]({"acik_yarisma": 0}) is None
+
+    def test_silent_zero_is_red(self, tmp_path):
+        o = dict(w._SAGLAM, code4rena_audits={"yarisma_sayisi": 0, "acik_yarisma": 0})
+        s = kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), o)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI and r["last_run_carriers"]["code4rena_audits"] == 0
+        assert any("SILENT-ZERO: code4rena_audits" in b for b in r["findings"])
+
+    def test_silent_none_is_red(self, tmp_path):
+        o = dict(w._SAGLAM, code4rena_audits={"total": 475})
+        kod, r = w.denetle(seri(tmp_path, kosu(ts(1), o)), SIMDI)
+        assert kod == KIRMIZI
+        assert any("SILENT-NONE: code4rena_audits" in b for b in r["findings"])
+
+    def test_zero_open_entries_alone_is_not_an_alarm(self, tmp_path):
+        extra = kosu(ts(1), {"code4rena_audits": {"yarisma_sayisi": 475, "acik_yarisma": 0}})
+        s = [x for x in (kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10))
+                         + kosu(ts(1), w._SAGLAM)) if '"code4rena_audits"' not in x or ts(1) not in x]
+        kod, r = w.denetle(seri(tmp_path, s + extra), SIMDI)
+        assert kod == YESIL, r["findings"]
+
+    def test_frozen_counter_is_yellow(self, tmp_path):
+        s = (kosu(ts(15), w._kaydir(w._SAGLAM, -20)) + kosu(ts(8), w._kaydir(w._SAGLAM, -10))
+             + kosu(ts(1), w._SAGLAM))
+        s = [x for x in s if '"code4rena_audits"' not in x]
+        sabit = {"code4rena_audits": {"yarisma_sayisi": 475}}
+        s += kosu(ts(15), sabit) + kosu(ts(8), sabit) + kosu(ts(1), sabit)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == SARI
+        frozen = [b for b in r["findings"] if "FROZEN" in b]
+        assert len(frozen) == 1 and frozen[0].startswith("YELLOW FROZEN: code4rena_audits")
+
+    def test_same_day_repeats_are_not_frozen(self, tmp_path):
+        s = (kosu(ts(saat=8), w._kaydir(w._SAGLAM, -2)) + kosu(ts(saat=7), w._kaydir(w._SAGLAM, -1))
+             + kosu(ts(saat=1), w._SAGLAM))
+        s = [x for x in s if '"code4rena_audits"' not in x]
+        sabit = {"code4rena_audits": {"yarisma_sayisi": 475}}
+        s += kosu(ts(saat=8), sabit) + kosu(ts(saat=7), sabit) + kosu(ts(saat=1), sabit)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == YESIL and r["consecutive_identical"]["code4rena_audits"] == 3
+
+    def test_dropped_from_the_last_run_is_red(self, tmp_path):
+        o = {k: v for k, v in w._SAGLAM.items() if k != "code4rena_audits"}
+        kod, r = w.denetle(seri(tmp_path, kosu(ts(1), o)), SIMDI)
+        assert kod == KIRMIZI
+        assert any("10/11" in b and "dropped=code4rena_audits" in b for b in r["findings"])
+
+    def test_derivation_run_count_matches_the_series(self):
+        from conftest import KOK
+        rows = [json.loads(x) for x in (KOK / "ai-arz-serisi.ndjson").read_text(encoding="utf-8").splitlines()
+                if x.strip()]
+        ok = [x for x in rows if x.get("uc") == "code4rena_audits" and x.get("durum") == "OK"
+              and x.get("zaman_utc", "") <= "2026-09-28T23:59:59"]
+        assert len(ok) == w.C4_TURETME_KOSU
+        assert min(x["ozet"]["yarisma_sayisi"] for x in ok) > 0

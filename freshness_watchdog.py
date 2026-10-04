@@ -85,7 +85,20 @@ DONMUS_TURETME_TARIHI = "2026-09-28"
 # consecutive-day repeats NEVER raise an alarm.
 DONMUS_MIN_YAYILIM_GUN = 10
 
-KAYITLI_UC = 10
+# EXPECTED ENDPOINTS: the 10 endpoints of the v0.2 run plus code4rena_audits (see below).
+KAYITLI_UC = 11
+
+# code4rena_audits — DERIVED [series up to 2026-09-28]: the endpoint appears in 24 runs
+# (2026-08-18T16:31Z .. 2026-09-28T07:00Z); 23 of them are OK rows, one is a HATA row
+# (2026-09-07T06:32Z). The derivation used those 23 OK runs, with the same three
+# measurements as the other carriers:
+#   - ZERO: the carrier `yarisma_sayisi` was never 0 (min = max = 475), so a 0/None means
+#     the schema broke; `acik_yarisma` is legitimately 0 in every run and is NOT a carrier;
+#   - DROP: the largest one-run fall was 0 %, well inside DUSUS_ORANI;
+#   - FROZEN: the value was 475 in all 23 OK runs, spread over 41 days. Like
+#     sherlock_contests it is a slow counter, so the shared rule (DONMUS_ESIK runs over
+#     DONMUS_MIN_YAYILIM_GUN days, YELLOW) applies unchanged and fires on the current series.
+C4_TURETME_KOSU = 23
 
 # DROP: a load-bearing number that falls by more than half between two consecutive runs.
 # MEASURED [series up to 2026-09-28, OK rows without per-package errors]: the largest
@@ -129,6 +142,7 @@ TASIYICILAR = {
     "npm_downloads":              lambda o: _topla(o, "toplam_30g"),
     "pypi_downloads":             lambda o: _topla(o, "aynasiz_toplam"),
     "github_repos":               lambda o: _topla(o, "yildiz"),
+    "code4rena_audits":           lambda o: _duz(o, "yarisma_sayisi"),
 }
 
 
@@ -227,7 +241,7 @@ def denetle(seri: Path, simdi=None, onceki=None):
     # ── records belonging to the last run ───────────────────────────────────
     son_kosu = [x for x in rows if x.get("zaman_utc") == son_damga]
     # count DISTINCT expected endpoint names, not records: a duplicated row or an extra,
-    # untracked endpoint (e.g. code4rena_audits) must not hide one that dropped
+    # untracked endpoint (e.g. cantina_competitions) must not hide one that dropped
     son_ucler = {x.get("uc") for x in son_kosu} & set(TASIYICILAR)
     r["last_run_endpoint_count"] = len(son_ucler)
 
@@ -357,6 +371,7 @@ _SAGLAM = {
     "hf_models": {"indirme_dagilimi": {"toplam": 1580224158}}, "npm_downloads": {"pkg": {"toplam_30g": 115914002}},
     "pypi_downloads": {"anthropic": {"aynasiz_toplam": 802816271}},
     "github_repos": {"lc/lc": {"yildiz": 144448}},
+    "code4rena_audits": {"yarisma_sayisi": 475},
 }
 
 
@@ -448,7 +463,7 @@ def oz_test():
                 ((simdi - timedelta(hours=1)).isoformat(timespec="seconds"), _SAGLAM, {})]
     kos("same-day-3-runs", ayni_gun, 0)
 
-    # 7) MISSING ENDPOINT: last run has 8 instead of 10 => RED
+    # 7) MISSING ENDPOINT: last run has 8 instead of 11 => RED
     eksik = {k: v for k, v in list(_SAGLAM.items())[:8]}
     kos("missing-endpoint", [(gun_once(8), _kaydir(_SAGLAM, -10), {}),
                              (gun_once(1), eksik, {})], 2)
