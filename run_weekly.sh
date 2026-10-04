@@ -25,6 +25,9 @@ python3 collector.py
 RC_COLLECT=$?
 say "STEP-1 rc=$RC_COLLECT"
 
+# newest snapshot published before this run: the audit checks the series still begins with it
+PREVIOUS="$(ls "$ARCHIVE"/ai-arz-serisi-*.ndjson 2>/dev/null | sort | tail -n 1)"
+
 say "=== STEP-2 STAMP (frozen snapshot) ==="
 if [ "$RC_COLLECT" -eq 0 ] && [ -s "$SERIES" ]; then
   mkdir -p "$ARCHIVE"
@@ -39,7 +42,7 @@ else
 fi
 
 say "=== STEP-3 AUDIT (freshness watchdog) ==="
-python3 "$ROOT/freshness_watchdog.py" --ledger "$HOME/logs/ai-arz-alarm.ndjson"
+python3 "$ROOT/freshness_watchdog.py" --ledger "$HOME/logs/ai-arz-alarm.ndjson" --previous "$PREVIOUS"
 RC_WATCHDOG=$?
 say "STEP-3 rc=$RC_WATCHDOG (0=GREEN 1=YELLOW 2=RED)"
 

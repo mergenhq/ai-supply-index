@@ -334,6 +334,10 @@ carry the meaning.
    happens once ~6 runs have accumulated.
 7. **`cantina_competitions` is implemented and measured but not yet wired in.** It is present in
    `collector.py` and deliberately absent from the active endpoint list, so it produces no rows.
+8. **One reordering in the first week.** When the rows of the second collector were merged on 2026-08-24,
+   the 24 rows published on 2026-08-18 were kept but their order within each run changed, so the
+   2026-08-18 file is not a byte prefix of later files. Every publication since then extends the previous
+   one unchanged, and the watchdog now checks this against the newest snapshot under `archive/`.
 
 ---
 

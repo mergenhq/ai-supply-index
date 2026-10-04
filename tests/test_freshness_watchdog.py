@@ -465,3 +465,46 @@ class TestStaleSource:
     def test_missing_or_unreadable_field_is_ignored(self, tmp_path, deger):
         kod, r = w.denetle(self.seri_ile(tmp_path, deger), SIMDI)
         assert kod == YESIL, r["findings"]
+
+
+class TestAppendOnly:
+    """The series must begin with the previous published snapshot, byte for byte."""
+    def test_series_extending_the_snapshot_is_green(self, tmp_path):
+        yol = saglikli(tmp_path)
+        onceki = tmp_path / "onceki.ndjson"
+        onceki.write_text("".join(yol.read_text(encoding="utf-8").splitlines(True)[:10]), encoding="utf-8")
+        kod, r = w.denetle(yol, SIMDI, onceki=onceki)
+        assert kod == YESIL, r["findings"]
+
+    def test_reordered_rows_are_red(self, tmp_path):
+        yol = saglikli(tmp_path)
+        satirlar = yol.read_text(encoding="utf-8").splitlines(True)
+        onceki = tmp_path / "onceki.ndjson"
+        onceki.write_text("".join(satirlar[:10]), encoding="utf-8")
+        satirlar[0], satirlar[1] = satirlar[1], satirlar[0]
+        yol.write_text("".join(satirlar), encoding="utf-8")
+        kod, r = w.denetle(yol, SIMDI, onceki=onceki)
+        assert kod == KIRMIZI
+        assert any("NOT-APPEND-ONLY" in b and "onceki.ndjson" in b for b in r["findings"])
+
+    def test_missing_snapshot_is_ignored(self, tmp_path):
+        kod, r = w.denetle(saglikli(tmp_path), SIMDI, onceki=tmp_path / "yok.ndjson")
+        assert kod == YESIL, r["findings"]
+
+    def test_cli_uses_newest_archive_snapshot_by_default(self, tmp_path, monkeypatch, capsys):
+        yol = saglikli(tmp_path)
+        (tmp_path / "archive").mkdir()
+        (tmp_path / "archive" / "ai-arz-serisi-20260101T000000Z.ndjson").write_text("eski\n", encoding="utf-8")
+        (tmp_path / "archive" / "ai-arz-serisi-20260801T000000Z.ndjson").write_text("yeni\n", encoding="utf-8")
+        monkeypatch.setattr(w, "datetime", sabit_datetime(SIMDI))
+        monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--series", str(yol)])
+        assert w.main() == KIRMIZI
+        assert "ai-arz-serisi-20260801T000000Z.ndjson" in capsys.readouterr().out
+
+    def test_cli_previous_empty_disables_the_check(self, tmp_path, monkeypatch, capsys):
+        yol = saglikli(tmp_path)
+        (tmp_path / "archive").mkdir()
+        (tmp_path / "archive" / "ai-arz-serisi-20260801T000000Z.ndjson").write_text("x\n", encoding="utf-8")
+        monkeypatch.setattr(w, "datetime", sabit_datetime(SIMDI))
+        monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--series", str(yol), "--previous", ""])
+        assert w.main() == YESIL
