@@ -249,7 +249,7 @@ class TestMain:
         import tempfile
         monkeypatch.setattr(tempfile, "mkdtemp", lambda **k: str(tmp_path))
         assert self.calistir(monkeypatch, ["--self-test"]) == 0
-        assert "15 passed / 0 failed" in capsys.readouterr().out
+        assert "16 passed / 0 failed" in capsys.readouterr().out
 
 
 def test_open_window_summary_keys_are_all_mapped():
@@ -271,3 +271,10 @@ def test_envelope_keys_written_by_the_collector_are_mapped():
     _, keys = te.harita_yukle()
     for k in ("zaman_utc", "surum", "uc", "not", "ozet", "durum", "saniye", "http", "hata", "toplayici"):
         assert k in keys, k
+
+
+def test_self_test_converts_a_full_open_entry(tmp_path, monkeypatch, capsys):
+    import tempfile
+    monkeypatch.setattr(tempfile, "mkdtemp", lambda **k: str(tmp_path))
+    assert te.oz_test(KOK / "ai-arz-serisi.ndjson") == 0
+    assert "open-window entry with every field converts with 0 unmapped keys" in capsys.readouterr().out

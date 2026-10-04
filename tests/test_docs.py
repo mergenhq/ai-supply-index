@@ -51,3 +51,25 @@ def test_pypi_window_matches_the_series():
     m = re.search(r"roughly (\d+) days", grup_notu("PyPI downloads"))
     assert m and abs(int(m.group(1)) - gun) <= 10, (m and m.group(1), gun)
     assert "362" not in (c.uc_pypi.__doc__ or "")
+
+
+def test_apify_note_and_sample_size():
+    notu = dict((u[0], u[2]) for u in c.UCLAR)["apify_store"]
+    assert "SLIDING" not in notu and "cumulative" in notu
+    assert "scanned" in grup_notu("Apify store")
+    sinir = README[README.index("2. **Sampling where the source paginates.**"):]
+    assert "taranan" in sinir.split("\n3. ")[0]
+
+
+def test_defillama_is_described_as_fees_not_revenue():
+    dl = next(g for g in HARITA["groups"] if g["name"] == "DeFiLlama")
+    metin = (dl["note"] + " ".join(k[3] for k in dl["keys"])).lower()
+    assert "not protocol revenue" in metin
+    assert "revenue" not in metin.replace("not protocol revenue", "")
+    ust = README[:README.index("## Method")]
+    assert "revenue" not in ust.lower()
+
+
+def test_readme_describes_the_test_suite():
+    assert "python3 -m pytest" in README
+    assert "Every script self-tests" not in README
