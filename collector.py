@@ -29,15 +29,15 @@ Internal identifiers and the published JSON keys remain Turkish — the keys are
 series continuity. See the Schema section of README.md for the full key map, and use
 `to_english.py` to generate an English-keyed mirror of the series.
 """
-import json, os, sys, time, urllib.request, urllib.error, urllib.parse
+import json, math, os, sys, time, urllib.request, urllib.error, urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
 KOK = Path(__file__).resolve().parent
 SERI = KOK / "ai-arz-serisi.ndjson"
-UA = "Mozilla/5.0 (compatible; mergen-arz-olcum/0.3)"
+UA = "Mozilla/5.0 (compatible; mergen-arz-olcum/0.4)"
 ZAMAN_ASIMI = 30
-SURUM = "0.3"
+SURUM = "0.4"
 
 # exit codes: 0 = every endpoint OK · KISMI = some endpoints OK · 1 = none OK
 KISMI = 3
@@ -71,11 +71,12 @@ def cek(url, ham=False):
 
 
 def yuzdelik(dizi, p):
-    """Nearest-rank percentile, no linear interpolation. `dizi` must already be sorted."""
+    """Nearest-rank percentile, no interpolation: the value at 1-based rank ceil(p/100 * n).
+    `dizi` must already be sorted. (Rows up to v0.3 used index round((n-1) * p/100).)"""
     if not dizi:
         return None
-    k = int(round((len(dizi) - 1) * p / 100.0))
-    return dizi[max(0, min(k, len(dizi) - 1))]
+    sira = math.ceil(len(dizi) * p / 100.0)
+    return dizi[max(1, min(sira, len(dizi))) - 1]
 
 
 def dagilim_ozeti(degerler, kovalar):

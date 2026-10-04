@@ -107,6 +107,20 @@ class TestYuzdelik:
         assert c.yuzdelik(d, 50) == 100 and c.yuzdelik(d, 90) == 10000 and c.yuzdelik(d, 10) == 1
 
 
+class TestNearestRank:
+    """Nearest-rank: the value at rank ceil(p/100 * n), 1-based."""
+    @pytest.mark.parametrize("p, beklenen", [(10, 2), (25, 5), (50, 9), (75, 13), (90, 16), (95, 17), (99, 17)])
+    def test_n17(self, p, beklenen):
+        assert c.yuzdelik(list(range(1, 18)), p) == beklenen
+
+    def test_no_bankers_rounding(self):
+        # n=6, p=50 -> rank 3; n=4, p=50 -> rank 2
+        assert c.yuzdelik([1, 2, 3, 4, 5, 6], 50) == 3 and c.yuzdelik([1, 2, 3, 4], 50) == 2
+
+    def test_version_is_bumped_with_the_definition(self):
+        assert c.SURUM == "0.4"
+
+
 class TestDagilimOzeti:
     def test_empty_and_non_numeric(self):
         assert c.dagilim_ozeti([], [1]) == {"n": 0}

@@ -115,7 +115,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `n` | `n` | integer | how many numeric values entered the distribution |
 | `toplam` | `total` | number | sum of all values |
 | `sifir_sayisi` | `zero_count` | integer | how many of the values were exactly 0 |
-| `p10` | `p10` | number | 10th percentile (nearest-rank, no interpolation) |
+| `p10` | `p10` | number | 10th percentile, nearest-rank (the value at rank ceil(p/100 * n)), no interpolation. Rows with version up to 0.3 used index round((n-1) * p/100), which can differ by one rank for small n |
 | `p25` | `p25` | number | 25th percentile |
 | `p50` | `p50` | number | median |
 | `p75` | `p75` | number | 75th percentile |
