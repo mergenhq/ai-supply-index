@@ -48,6 +48,9 @@ def test_x402(r):
     o = r["ozet"]
     if "cagri_30g" not in o:
         return
+    for alan in ("kaynak_sayisi", "sayfa"):
+        deger = o.get(alan)
+        assert type(deger) is int, "x402 %s must be an integer, got %r" % (alan, deger)
     kapsadi = o["sayfa"] * 500 >= o["kaynak_sayisi"]      # the walk covered the registry
     if kapsadi:
         assert o["taranan"] <= o["kaynak_sayisi"] <= o["sayfa"] * 500
