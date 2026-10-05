@@ -2,9 +2,10 @@
 license: cc-by-4.0
 pretty_name: AI Supply Index
 tags:
-- economics
-- time-series
 - ai-economy
+- supply-side
+- weekly
+- time-series
 configs:
 - config_name: series-en
   data_files: series-en.ndjson
@@ -13,14 +14,9 @@ configs:
   data_files: ai-arz-serisi.ndjson
 ---
 
-# AI Supply Index — who is actually earning in the AI economy?
+# AI Supply Index
 
 **A weekly, timestamped, independently collected record of the *supply side* of the AI economy.**
-
-Most public measurement covers **demand** — how many people use AI, for what. The supply side
-(who is actually earning, and how concentrated those earnings are) is measured far less often,
-and several of the sources that would answer it **do not keep history**. A snapshot not taken
-this week cannot be reconstructed later.
 
 | file | what it is |
 |---|---|
@@ -65,5 +61,3 @@ only way this series can be evaluated as a track record rather than as a claim.
 Data (`ai-arz-serisi.ndjson`, `series-en.ndjson`): CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/legalcode
 
 `schema_map.json`: MIT, as listed under Licensing in the repository README.
-
-Use the data freely, including commercially — attribution is the only condition.
