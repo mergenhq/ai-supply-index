@@ -1,6 +1,7 @@
 """Cross-field checks on the published series: values inside one row that must agree with each
-other. Only rows with durum == "OK" and no `olculemedi` are checked; per-package entries that
-carry `hata` or `olculemedi` are skipped. The file is only read."""
+other. Only rows with durum == "OK" and no `olculemedi` are checked, except that every OK x402 row
+is checked for whether its walk covered the registry; per-package entries that carry `hata` or
+`olculemedi` are skipped. The file is only read."""
 import collections
 import json
 from datetime import datetime, timedelta
@@ -35,16 +36,37 @@ def paketler(r, alan):
             if isinstance(v, dict) and alan in v and "hata" not in v and "olculemedi" not in v]
 
 
-@kullanilir("x402_discovery")
+X402 = [r for r in SATIRLAR if r.get("uc") == "x402_discovery" and r.get("durum") == "OK"
+        and isinstance(r.get("ozet"), dict)]
+
+# A capped x402 row published without `olculemedi`; README "Known limits" describes it.
+X402_KAPSAMSIZ_ISARETSIZ = {"2026-10-05T07:00:02+00:00"}
+
+
+@pytest.mark.parametrize("r", X402, ids=[r["zaman_utc"] for r in X402])
 def test_x402(r):
     o = r["ozet"]
     if "cagri_30g" not in o:
         return
-    assert o["taranan"] <= o["kaynak_sayisi"] <= o["sayfa"] * 500
+    kapsadi = o["sayfa"] * 500 >= o["kaynak_sayisi"]      # the walk covered the registry
+    if kapsadi:
+        assert o["taranan"] <= o["kaynak_sayisi"] <= o["sayfa"] * 500
+    else:
+        assert "olculemedi" in o or r["zaman_utc"] in X402_KAPSAMSIZ_ISARETSIZ, \
+            "x402 walked %d pages for %d resources without olculemedi" % (o["sayfa"], o["kaynak_sayisi"])
+        assert o["taranan"] <= o["sayfa"] * 500 < o["kaynak_sayisi"]
     assert o["cagri_30g"]["n"] == o["taranan"] and o["odeyen_30g"]["n"] <= o["taranan"]
     top = [x["cagri"] for x in o["top10_cagri"]]
     assert azalan(top) and len(top) == min(10, o["taranan"])
     assert not top or round(top[0], 2) == o["cagri_30g"]["maks"]
+
+
+def test_the_listed_x402_exception_is_a_capped_row_without_olculemedi():
+    satirlar = {r["zaman_utc"]: r["ozet"] for r in X402}
+    for t in X402_KAPSAMSIZ_ISARETSIZ:
+        if t in satirlar:
+            o = satirlar[t]
+            assert o["sayfa"] * 500 < o["kaynak_sayisi"] and "olculemedi" not in o
 
 
 @kullanilir("sherlock_leaderboard")
