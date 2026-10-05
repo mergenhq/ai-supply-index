@@ -32,7 +32,7 @@
         ["ozet", "summary", "object", "the measurement itself; its shape depends on the endpoint"],
         ["durum", "status", "string", "OK | HATA (error) | HTTP-HATA (http error) | HATA-ICERIDE (error inside the summary)"],
         ["saniye", "duration_s", "number (seconds)", "wall-clock time this endpoint took"],
-        ["http", "http_status", "integer", "HTTP status code, only present when the request failed"],
+        ["http", "http_status", "integer", "HTTP status code; present when the request failed, and on the v0.1 rows, where it is 200"],
         ["hata", "error", "string", "Python exception repr, truncated; only present on failure"],
         ["url", "url", "string", "on the envelope: the endpoint URL (v0.1 rows only); inside open entries (open_entries): the entry's page on the platform"],
         ["bayt", "bytes", "integer", "raw response size (v0.1 rows only); raw payloads are not stored"],
@@ -145,7 +145,7 @@
     },
     {
       "name": "Apify store",
-      "note": "Published automation actors. SAMPLED: top 1,000 by popularity, which is an upper tier and explicitly not the store median. About 85-87 % of the sampled actors carry a numeric user count; `scanned` gives the exact number that entered the distribution.",
+      "note": "Published automation actors. SAMPLED: top 1,000 by popularity, which is an upper tier and explicitly not the store median. In the OK rows up to 2026-10-05, 835–875 of the 1,000 sampled actors per run (83.5–87.5 %) carry a numeric user count; `scanned` gives the exact number that entered the distribution.",
       "keys": [
         ["magaza_toplam_aktor", "store_total_actors", "integer", "total actors the store reports"],
         ["toplam_kullanici_dagilimi", "total_users_distribution", "object (distribution)", "distribution of users per actor across the sample"],
@@ -155,11 +155,11 @@
     },
     {
       "name": "Hugging Face",
-      "note": "Top 100 models by download count. Downloads are cumulative and there is no official historical endpoint — this series is the archive.",
+      "note": "Top 100 models by download count. `downloads` is the count the source reports for its recent window, not a cumulative total, so a model's value can fall from one run to the next; there is no official historical endpoint — this series is the archive.",
       "keys": [
         ["model_sayisi", "model_count", "integer", "models in the sample"],
-        ["indirme_dagilimi", "download_distribution", "object (distribution)", "distribution of cumulative downloads across the sample"],
-        ["indirme", "downloads", "integer", "that model's cumulative downloads"],
+        ["indirme_dagilimi", "download_distribution", "object (distribution)", "distribution of the models' downloads across the sample (the count the source reports for its recent window, not a cumulative total)"],
+        ["indirme", "downloads", "integer", "that model's downloads: the count the source reports for its recent window, not a cumulative total; it can fall from one run to the next"],
         ["begeni", "likes", "integer", "that model's like count"]
       ]
     },
