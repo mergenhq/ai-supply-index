@@ -221,7 +221,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 
 #### Apify store
 
-*Published automation actors. SAMPLED: top 1,000 by popularity, which is an upper tier and explicitly not the store median. About 83-87 % of the sampled actors carry a numeric user count; `scanned` gives the exact number that entered the distribution.*
+*Published automation actors. SAMPLED: top 1,000 by popularity, which is an upper tier and explicitly not the store median. In the OK rows up to 2026-10-05, 835–875 of the 1,000 sampled actors per run (83.5–87.5 %) carry a numeric user count; `scanned` gives the exact number that entered the distribution.*
 
 | key (as published) | English | type | what it measures |
 |---|---|---|---|
@@ -325,8 +325,9 @@ carry the meaning.
 ### Known limits (stated, not hidden)
 
 1. **Summaries only.** Raw API payloads are not stored (size); a `bayt` field records payload size for control.
-2. **Sampling where the source paginates.** Apify: top 1,000 of the store (47,257 on 2026-08-18) by popularity, of which about 835–870 per run
-   carry a numeric user count (`taranan` / `scanned` gives the exact number). Hugging Face: top 100.
+2. **Sampling where the source paginates.** Apify: top 1,000 of the store (47,257 on 2026-08-18) by popularity; in the OK
+   rows up to 2026-10-05, 835–875 of the 1,000 sampled actors per run (83.5–87.5 %) carry a numeric user count
+   (`taranan` / `scanned` gives the exact number). Hugging Face: top 100.
    These are **upper-tier samples, not medians** — treat them as such.
 3. **Schema fragility.** If an endpoint changes shape, a naive reader returns 0 silently. This happened to us
    on day one (`contests` vs `items`), which is why the freshness watchdog checks for silent zeros, frozen
@@ -348,6 +349,10 @@ carry the meaning.
    the 24 rows published on 2026-08-18 were kept but their order within each run changed, so the
    2026-08-18 file is not a byte prefix of later files. Every publication since then extends the previous
    one unchanged, and the watchdog now checks this against the newest snapshot under `archive/`.
+9. **One incomplete x402 row.** The `x402_discovery` row of the `2026-10-05T07:00:02Z` run walked 60 pages
+   (`sayfa`) and scanned 30,000 (`taranan`) of the 34,419 resources the registry reported (`kaynak_sayisi`). It
+   carries no `olculemedi` / `unmeasurable` key, so its distributions (`cagri_30g`, `odeyen_30g`) and `top10_cagri`
+   cover only the resources scanned. The row stays as published; the series is append-only.
 
 ---
 
