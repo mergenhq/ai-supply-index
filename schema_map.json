@@ -145,7 +145,7 @@
     },
     {
       "name": "Apify store",
-      "note": "Published automation actors. SAMPLED: top 1,000 by popularity, which is an upper tier and explicitly not the store median. About 83-87 % of the sampled actors carry a numeric user count; `scanned` gives the exact number that entered the distribution.",
+      "note": "Published automation actors. SAMPLED: top 1,000 by popularity, which is an upper tier and explicitly not the store median. In the OK rows up to 2026-10-05, 835–875 of the 1,000 sampled actors per run (83.5–87.5 %) carry a numeric user count; `scanned` gives the exact number that entered the distribution.",
       "keys": [
         ["magaza_toplam_aktor", "store_total_actors", "integer", "total actors the store reports"],
         ["toplam_kullanici_dagilimi", "total_users_distribution", "object (distribution)", "distribution of users per actor across the sample"],
