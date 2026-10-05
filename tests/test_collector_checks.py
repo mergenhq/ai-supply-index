@@ -155,15 +155,18 @@ def test_x402_stops_when_the_pages_cover_the_total(ag):
 
 
 def test_x402_total_reached_exactly_at_the_cap_has_no_cap_note(ag):
-    cagrilar = ag({"pagination": {"total": 30000}, "items": [{"quality": {}}]})
+    tavan = c.X402_SAYFA_TAVANI
+    cagrilar = ag({"pagination": {"total": tavan * 500}, "items": [{"quality": {}}]})
     o = c.uc_x402()
-    assert len(cagrilar) == 60 and "olculemedi" not in o
+    assert len(cagrilar) == tavan and "olculemedi" not in o
 
 
 def test_x402_cap_with_more_items_left_is_unmeasurable(ag):
-    ag({"pagination": {"total": 30001}, "items": [{"quality": {}}]})
+    tavan = c.X402_SAYFA_TAVANI
+    ag({"pagination": {"total": tavan * 500 + 1}, "items": [{"quality": {}}]})
     o = c.uc_x402()
-    assert o["sayfa"] == 60 and o["olculemedi"].startswith("page cap reached: walked 60 pages")
+    assert o["sayfa"] == tavan
+    assert o["olculemedi"].startswith("page cap reached: walked %d pages" % tavan)
 
 
 def test_x402_short_walk_without_total_has_no_cap_note(ag):
