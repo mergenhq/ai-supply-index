@@ -1,0 +1,52 @@
+{
+  "name": "ai-supply-index",
+  "title": "AI Supply Index — who is actually earning in the AI economy?",
+  "description": "A weekly, timestamped, independently collected record of the supply side of the AI economy. Each publication is OpenTimestamps-stamped: the series is copied to a frozen, dated snapshot under archive/ and that snapshot is stamped next to it, so that \"we measured this on that date\" is verifiable, not asserted.",
+  "homepage": "https://github.com/mergenhq/ai-supply-index",
+  "licenses": [
+    {
+      "name": "CC-BY-4.0",
+      "title": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      "path": "https://creativecommons.org/licenses/by/4.0/legalcode"
+    }
+  ],
+  "contributors": [
+    {
+      "title": "mergenhq",
+      "role": "author"
+    }
+  ],
+  "resources": [
+    {
+      "name": "ai-arz-serisi",
+      "path": "ai-arz-serisi.ndjson",
+      "format": "ndjson",
+      "mediatype": "application/x-ndjson",
+      "encoding": "utf-8",
+      "description": "the raw series, append-only, keys frozen"
+    },
+    {
+      "name": "series-en",
+      "path": "series-en.ndjson",
+      "format": "ndjson",
+      "mediatype": "application/x-ndjson",
+      "encoding": "utf-8",
+      "description": "the same data with English keys, generated"
+    },
+    {
+      "name": "schema-map",
+      "path": "schema_map.json",
+      "format": "json",
+      "mediatype": "application/json",
+      "encoding": "utf-8",
+      "description": "the key contract, source of the Schema table",
+      "licenses": [
+        {
+          "name": "MIT",
+          "title": "MIT License",
+          "path": "LICENSE"
+        }
+      ]
+    }
+  ]
+}
