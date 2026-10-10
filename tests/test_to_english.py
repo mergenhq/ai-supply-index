@@ -278,3 +278,55 @@ def test_self_test_converts_a_full_open_entry(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(tempfile, "mkdtemp", lambda **k: str(tmp_path))
     assert te.oz_test(KOK / "ai-arz-serisi.ndjson") == 0
     assert "open-window entry with every field converts with 0 unmapped keys" in capsys.readouterr().out
+
+
+# ── the self-test reports a missing guard as a failure ──────────────────────
+class TestSelfTestReportsMissingGuards:
+    @pytest.fixture
+    def oz_test(self, tmp_path, monkeypatch, capsys):
+        import tempfile
+        monkeypatch.setattr(tempfile, "mkdtemp", lambda **k: str(tmp_path))
+
+        def calistir():
+            kod = te.oz_test(KOK / "ai-arz-serisi.ndjson")
+            return kod, capsys.readouterr().out
+        return calistir
+
+    def test_unknown_key_that_does_not_stop_the_run_is_a_failure(self, oz_test, monkeypatch):
+        monkeypatch.setattr(te, "ingilizce_yaz", lambda *a, **k: 0)
+        kod, out = oz_test()
+        assert kod == 1
+        assert "[FAIL] unknown key makes the run FAIL  — no exception raised" in out
+
+    def test_name_collision_that_does_not_stop_the_run_is_a_failure(self, oz_test, monkeypatch):
+        gercek = te.cevir
+
+        def cevir(*a, **k):
+            try:
+                return gercek(*a, **k)
+            except te.AdCakismasi:
+                return {}
+        monkeypatch.setattr(te, "cevir", cevir)
+        kod, out = oz_test()
+        assert kod == 1
+        assert "[FAIL] name collision makes the run FAIL  — no exception raised" in out
+
+    def test_malformed_table_row_is_a_failure(self, oz_test, monkeypatch):
+        gercek = te.sema_md
+        monkeypatch.setattr(te, "sema_md", lambda: gercek() + "\n| `x` | `y` | int |\n")
+        kod, out = oz_test()
+        assert kod == 1
+        assert "[FAIL] every generated table row has exactly 4 columns  — 1 malformed" in out
+
+    def test_clean_run_reports_no_failure(self, oz_test):
+        kod, out = oz_test()
+        assert kod == 0 and "[FAIL]" not in out
+
+
+def test_script_entry_point_prints_help(monkeypatch, capsys):
+    import runpy
+    monkeypatch.setattr("sys.argv", ["to_english.py", "--help"])
+    with pytest.raises(SystemExit) as e:
+        runpy.run_path(te.__file__, run_name="__main__")
+    assert e.value.code == 0
+    assert capsys.readouterr().out.startswith("usage: to_english.py")
