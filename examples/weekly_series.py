@@ -14,14 +14,17 @@ is printed as a GAP, from the endpoint's first row to the last week in the serie
 Standard library only. Usage:
     python3 examples/weekly_series.py
     python3 examples/weekly_series.py --endpoint x402_discovery --json
+    python3 examples/weekly_series.py --csv > weekly.csv
 """
 import argparse
+import csv
 import json
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
 DEFAULT_SERIES = Path(__file__).resolve().parent.parent / "ai-arz-serisi.ndjson"
+CSV_COLUMNS = ["week", "endpoint", "value", "zaman_utc", "gap"]
 
 
 def _path(*keys):
@@ -153,7 +156,11 @@ def main(argv=None):
                     help="path to the NDJSON series (default: ai-arz-serisi.ndjson in the repository)")
     ap.add_argument("--endpoint", action="append", choices=sorted(VALUES), metavar="NAME",
                     help="only this endpoint; repeat for several (default: every endpoint in the series)")
-    ap.add_argument("--json", action="store_true", help="print one JSON object per line instead of a table")
+    fmt = ap.add_mutually_exclusive_group()
+    fmt.add_argument("--json", action="store_true", help="print one JSON object per line instead of a table")
+    fmt.add_argument("--csv", action="store_true",
+                     help="print CSV with the columns %s; in a gap row value and zaman_utc are "
+                          "empty (never 0) and gap gives the reason" % ",".join(CSV_COLUMNS))
     a = ap.parse_args(argv)
 
     try:
@@ -163,10 +170,24 @@ def main(argv=None):
         return 1
 
     try:
-        _print(entries, a.json)
+        if a.csv:
+            write_csv(entries, sys.stdout)
+        else:
+            _print(entries, a.json)
     except BrokenPipeError:          # e.g. piped into `head`
         sys.stderr.close()
     return 0
+
+
+def write_csv(entries, out):
+    """The same rows as the table, as CSV. A gap leaves value and zaman_utc empty."""
+    w = csv.writer(out, lineterminator="\n")
+    w.writerow(CSV_COLUMNS)
+    for e in entries:
+        if e["value"] is None:
+            w.writerow([e["week"], e["endpoint"], "", "", e["gap"]])
+        else:
+            w.writerow([e["week"], e["endpoint"], repr(e["value"]), e["zaman_utc"], ""])
 
 
 def _print(entries, as_json):
