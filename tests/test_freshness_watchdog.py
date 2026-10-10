@@ -650,3 +650,75 @@ class TestCode4renaGuarded:
               and x.get("zaman_utc", "") <= "2026-09-28T23:59:59"]
         assert len(ok) == w.C4_TURETME_KOSU
         assert min(x["ozet"]["yarisma_sayisi"] for x in ok) > 0
+
+
+# ── missing and malformed input on the less common paths ────────────────────
+class TestMalformedInputPaths:
+    def test_file_mtime_is_none_when_the_file_cannot_be_stat_after_reading(self, tmp_path, monkeypatch):
+        yol = saglikli(tmp_path)
+        P = type(yol)
+        gercek_stat, gercek_oku, okundu = P.stat, P.read_text, []
+
+        def read_text(self, *a, **k):
+            okundu.append(self)
+            return gercek_oku(self, *a, **k)
+
+        def stat(self, *a, **k):
+            if self == yol and okundu:                # the file vanishes once it has been read
+                raise FileNotFoundError(str(self))
+            return gercek_stat(self, *a, **k)
+        monkeypatch.setattr(P, "read_text", read_text)
+        monkeypatch.setattr(P, "stat", stat)
+        kod, r = w.denetle(yol, SIMDI)
+        assert r["file_mtime_age_days"] is None
+        assert kod == YESIL and r["record_age_days"] == pytest.approx(1.0)
+
+    def test_unparseable_stamps_give_no_frozen_finding(self, tmp_path):
+        s = kosu("bozuk-1", w._SAGLAM) + kosu("bozuk-2", w._SAGLAM) + kosu("bozuk-3", w._SAGLAM)
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI
+        assert r["consecutive_identical"]["hf_models"] == 3
+        assert not any("FROZEN" in b for b in r["findings"])
+        assert any("UNREADABLE" in b for b in r["findings"])
+
+    def test_kaydir_leaves_non_numeric_values_unchanged(self):
+        o = {"a": {"n": 1, "ad": "x", "alt": {"m": 2, "etiket": "y", "liste": [1]}}}
+        assert w._kaydir(o, 5) == {"a": {"n": 6, "ad": "x", "alt": {"m": 7, "etiket": "y", "liste": [1]}}}
+        assert o["a"]["n"] == 1                       # the input is not modified
+
+    def test_script_entry_point_prints_help(self, monkeypatch, capsys):
+        import runpy
+        monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--help"])
+        with pytest.raises(SystemExit) as e:
+            runpy.run_path(w.__file__, run_name="__main__")
+        assert e.value.code == 0
+        out = capsys.readouterr().out
+        assert out.startswith("usage: freshness_watchdog.py") and "--series" in out
+
+    @pytest.mark.parametrize("damga", [1724000000, 1.5, True, ["2026-08-18"], {"t": 1}])
+    def test_non_string_stamp_is_ignored_like_a_missing_stamp(self, tmp_path, damga):
+        s = kosu(ts(8), w._kaydir(w._SAGLAM, -10)) + kosu(ts(1), w._SAGLAM)
+        s.append(json.dumps({"zaman_utc": damga, "uc": "hf_models", "ozet": {}, "durum": "OK"}))
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == YESIL
+        assert r["run_count"] == 2 and r["last_record_utc"] == ts(1)
+
+    def test_only_non_string_stamps_is_red_unreadable(self, tmp_path):
+        s = [json.dumps({"zaman_utc": 1724000000, "uc": uc, "ozet": o}) for uc, o in w._SAGLAM.items()]
+        kod, r = w.denetle(seri(tmp_path, s), SIMDI)
+        assert kod == KIRMIZI and r["run_count"] == 0
+        assert any("UNREADABLE" in b for b in r["findings"])
+
+    def test_text_output_prints_a_zero_record_age_as_zero(self, tmp_path, monkeypatch, capsys):
+        yol = seri(tmp_path, kosu(ts(0), w._SAGLAM))
+        monkeypatch.setattr(w, "datetime", sabit_datetime(SIMDI))
+        monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--series", str(yol), "--previous", ""])
+        assert w.main() == 0
+        assert "(age 0.00 days)" in capsys.readouterr().out
+
+    def test_text_output_marks_an_unreadable_record_age(self, tmp_path, monkeypatch, capsys):
+        yol = seri(tmp_path, kosu("bozuk-damga", w._SAGLAM))
+        monkeypatch.setattr(w, "datetime", sabit_datetime(SIMDI))
+        monkeypatch.setattr("sys.argv", ["freshness_watchdog.py", "--series", str(yol), "--previous", ""])
+        assert w.main() == 2
+        assert "(age -1.00 days)" in capsys.readouterr().out

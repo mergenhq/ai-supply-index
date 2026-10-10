@@ -216,7 +216,9 @@ def denetle(seri: Path, simdi=None, onceki=None):
         return 2, r
 
     # ── (1) STALENESS ───────────────────────────────────────────────────────
-    damgalar = sorted({x.get("zaman_utc", "") for x in rows if x.get("zaman_utc")})
+    # a run stamp is a non-empty string; any other value counts as a missing stamp
+    damgalar = sorted({x["zaman_utc"] for x in rows
+                       if isinstance(x.get("zaman_utc"), str) and x["zaman_utc"]})
     son_damga = damgalar[-1] if damgalar else None
     r["last_record_utc"] = son_damga
     r["run_count"] = len(damgalar)
@@ -513,7 +515,9 @@ def main():
         print("AI SUPPLY INDEX — FRESHNESS WATCHDOG — %s" % r["severity"])
         print("  series=%s records=%s runs=%s" % (r["series"], r.get("record_count"), r.get("run_count")))
         print("  last record=%s (age %.2f days) · file-mtime age=%s days"
-              % (r.get("last_record_utc"), r.get("record_age_days") or -1, r.get("file_mtime_age_days")))
+              % (r.get("last_record_utc"),
+                 -1 if r.get("record_age_days") is None else r["record_age_days"],
+                 r.get("file_mtime_age_days")))
         for b in r["findings"]:
             print("  - %s" % b)
     if a.ledger:
