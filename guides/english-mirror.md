@@ -36,6 +36,7 @@ data, so they are copied unchanged.
 | `sherlock_leaderboard` | `researcher_count` |
 | `sherlock_contests` | `open_count` |
 | `code4rena_audits` | `open_count` |
+| `cantina_competitions` | `open_count` |
 | `defillama_fees_ai_agents` | `ai_total_30d` |
 | `defillama_summary_virtuals` | `total_30d` |
 | `apify_store` | `store_total_actors` |
@@ -53,6 +54,7 @@ from datetime import datetime
 PATHS = {
     "x402_discovery": ["resource_count"], "sherlock_leaderboard": ["researcher_count"],
     "sherlock_contests": ["open_count"], "code4rena_audits": ["open_count"],
+    "cantina_competitions": ["open_count"],
     "defillama_fees_ai_agents": ["ai_total_30d"], "defillama_summary_virtuals": ["total_30d"],
     "apify_store": ["store_total_actors"], "hf_models": ["download_distribution", "total"],
 }

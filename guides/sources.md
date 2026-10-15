@@ -16,13 +16,14 @@ unauthenticated GETs. Raw responses are not stored, only the summaries (README, 
 | `defillama_fees_ai_agents` | `https://api.llama.fi/overview/fees?excludeTotalDataChart=true&excludeTotalDataChartBreakdown=true` | one request |
 | `defillama_summary_virtuals` | `https://api.llama.fi/summary/fees/%s` with `LLAMA_PROTOKOL` = `virtuals-protocol` | one request |
 | `apify_store` | `https://api.apify.com/v2/store?limit=100&offset=%d&sortBy=popularity` | 10 pages (the top 1,000 by popularity) |
+| `cantina_competitions` | `https://cantina.xyz/api/v0/competitions` | one request (a flat list) |
 | `hf_models` | `https://huggingface.co/api/models?sort=downloads&direction=-1&limit=100` | one request |
 | `npm_downloads` | `https://api.npmjs.org/downloads/range/last-month/%s` | one request per package |
 | `pypi_downloads` | `https://pypistats.org/api/packages/%s/overall` | one request per package, 2 s apart |
 | `github_repos` | `https://api.github.com/repos/%s` | one request per repository |
 
-`cantina_competitions` (`https://cantina.xyz/api/v0/competitions`) is implemented in
-`collector.py` but not in the active endpoint list, so it writes no rows.
+`cantina_competitions` (`https://cantina.xyz/api/v0/competitions`) was added to the active endpoint
+list on 2026-10-08; it writes rows from the `2026-10-12T07:00:03+00:00` run onward.
 
 ## Upstream field → stored key
 
@@ -38,6 +39,9 @@ unauthenticated GETs. Raw responses are not stored, only the summaries (README, 
 - **code4rena_audits**: `pagination.total` → `yarisma_sayisi`. Audits with `endTime` after the run →
   `acik_yarisma`, of which `codeAccess` = `public` → `acik_kamu`. The newest `startTime` →
   `en_yeni_baslangic_utc`.
+- **cantina_competitions**: the number of listed competitions → `yarisma_sayisi`. Competitions whose
+  `timeframe.end` is after the run → `acik_yarisma`, of which `kind` = `public_contest` → `acik_kamu`;
+  `kycRequired` → `kyc` on each open entry.
 - **defillama_fees_ai_agents**: protocols whose `category` contains "AI Agent". Their `total24h`,
   `total7d` and `total30d` are summed into `ai_total24h`, `ai_total7d` and `ai_total30d`. The five
   largest by `total30d` → `ai_top5_30d`, and the distribution of `total30d` → `ai_30g_dagilim`.

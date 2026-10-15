@@ -29,12 +29,18 @@ def bolum(baslik):
 
 
 # ── Method ──────────────────────────────────────────────────────────────────
-def test_eleven_endpoints():
-    """'**11 endpoints**, all public'"""
-    assert "**11 endpoints**" in bolum("## Method")
-    assert len(c.UCLAR) == 11 and len({u[0] for u in c.UCLAR}) == 11
+CANTINA_ILK = "2026-10-12T07:00:03+00:00"
+
+
+def test_twelve_endpoints():
+    """'**12 endpoints** (11 until 2026-10-08; `cantina_competitions` writes rows from the 2026-10-12 run)'
+    The newest run carries every endpoint; before the cantina run it carries the other eleven."""
+    assert "**12 endpoints** (11 until 2026-10-08; `cantina_competitions` writes rows from the 2026-10-12 run)" \
+        in bolum("## Method")
+    assert len(c.UCLAR) == 12 and len({u[0] for u in c.UCLAR}) == 12
     son = max(KOSULAR)
-    assert {r["uc"] for r in KOSULAR[son]} == {u[0] for u in c.UCLAR}
+    beklenen = {u[0] for u in c.UCLAR} - (set() if son >= CANTINA_ILK else {"cantina_competitions"})
+    assert {r["uc"] for r in KOSULAR[son]} == beklenen
 
 
 def test_requests_carry_no_credentials(monkeypatch):
@@ -136,9 +142,10 @@ def test_series_starts_on_2026_08_18():
     assert min(KOSULAR).startswith("2026-08-18")
 
 
-def test_watchdog_guards_all_eleven_endpoints():
-    """'The watchdog guards all 11 of the 11 endpoints.'"""
-    assert set(w.TASIYICILAR) == {u[0] for u in c.UCLAR} and w.KAYITLI_UC == 11
+def test_watchdog_guards_eleven_of_the_twelve_endpoints():
+    """'The watchdog guards 11 of the 12 endpoints.'"""
+    assert "The watchdog guards 11 of the 12 endpoints." in README
+    assert set(w.TASIYICILAR) == {u[0] for u in c.UCLAR} - {"cantina_competitions"} and w.KAYITLI_UC == 11
 
 
 def test_frozen_thresholds_were_derived_from_the_runs_up_to_2026_09_28():
@@ -162,11 +169,14 @@ def test_hugging_face_and_defillama_carriers_are_summed_values_that_change_over_
                 assert a != b, (uc, ta, tb)
 
 
-def test_cantina_is_implemented_but_not_wired_in():
-    """'`cantina_competitions` is implemented and measured but not yet wired in.'"""
-    assert callable(c.uc_cantina_competitions)
-    assert "cantina_competitions" not in {u[0] for u in c.UCLAR}
-    assert not any(r["uc"] == "cantina_competitions" for r in SATIRLAR)
+def test_cantina_was_wired_in_and_writes_rows_only_from_its_first_run():
+    """'`cantina_competitions` was wired in on 2026-10-08. Its first row is in the 2026-10-12T07:00:03+00:00 run;
+    earlier runs hold no cantina row'"""
+    assert "**`cantina_competitions` was wired in on 2026-10-08.** Its first row is in the `%s`" % CANTINA_ILK in README
+    assert "cantina_competitions" in {u[0] for u in c.UCLAR}
+    assert all(r["zaman_utc"] >= CANTINA_ILK for r in SATIRLAR if r["uc"] == "cantina_competitions")
+    if max(KOSULAR) >= CANTINA_ILK:
+        assert any(r["uc"] == "cantina_competitions" for r in KOSULAR[CANTINA_ILK])
 
 
 # ── Using the series ────────────────────────────────────────────────────────
