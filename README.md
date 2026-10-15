@@ -49,8 +49,8 @@ earlier runs.
 
 ## Method
 
-- **11 endpoints**, all public, **no authentication, no account, no scraping of gated content**
-- A complete run takes about **70–190 seconds** for all 11 endpoints (median ≈ 100 s up to 2026-09-28; `saniye` per row);
+- **12 endpoints** (11 until 2026-10-08; `cantina_competitions` writes rows from the 2026-10-12 run), all public, **no authentication, no account, no scraping of gated content**
+- A complete run takes about **70–190 seconds** for all endpoints (median ≈ 100 s up to 2026-09-28, when there were 11; `saniye` per row);
   runs with failed endpoints took up to about an hour (2,317–3,692 s). Cost **$0**
 - Every run appends one line per endpoint to `ai-arz-serisi.ndjson` (JSON Lines, append-only)
 - Runs **twice a week, Mondays and Thursdays 07:00 UTC**, plus an **independent daily freshness watchdog
@@ -146,7 +146,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 
 #### Open-window watch
 
-*Endpoints sherlock_contests, code4rena_audits (and cantina_competitions, implemented but not yet wired). Answers 'how many doors are open right now', which is a different question from 'how many exist'.*
+*Endpoints sherlock_contests, code4rena_audits and cantina_competitions (rows from the 2026-10-12 run onward). Answers 'how many doors are open right now', which is a different question from 'how many exist'.*
 
 | key (as published) | English | type | what it measures |
 |---|---|---|---|
@@ -332,19 +332,20 @@ carry the meaning.
 3. **Schema fragility.** If an endpoint changes shape, a naive reader returns 0 silently. This happened to us
    on day one (`contests` vs `items`), which is why the freshness watchdog checks for silent zeros, frozen
    counters, missing endpoints and open-window listings whose newest entry is months old — not just staleness.
-4. **Eleven endpoints is not the supply side.** It is eleven measurable corners of it. Coverage will be stated
+4. **Twelve endpoints is not the supply side.** It is twelve measurable corners of it. Coverage will be stated
    with every expansion.
 5. **Short history.** The series starts on 2026-08-18. Its value compounds; it does not
    start high.
-6. **The watchdog guards all 11 of the 11 endpoints.** `code4rena_audits` joined the watchdog's table with
+6. **The watchdog guards 11 of the 12 endpoints.** `code4rena_audits` joined the watchdog's table with
    `yarisma_sayisi` (total audits listed) as its load-bearing number, derived from the 23 OK runs that carry
    it up to 2026-09-28: it was never 0 and never fell, so a silent zero or a drop is caught. It stayed at 475
    for all 41 days, so, like `sherlock_contests`, it is a slow counter and the frozen check reports it as
    YELLOW until it moves. The frozen thresholds and carriers were re-derived from the 28 runs up to
    2026-09-28; the Hugging Face and DeFiLlama category carriers are now the summed downloads and the summed
    30-day fees, which move with every run.
-7. **`cantina_competitions` is implemented and measured but not yet wired in.** It is present in
-   `collector.py` and deliberately absent from the active endpoint list, so it produces no rows.
+7. **`cantina_competitions` was wired in on 2026-10-08.** Its first row is in the `2026-10-12T07:00:03+00:00`
+   run; earlier runs hold no cantina row, which means "not connected", not "nothing open". It has too
+   few runs to derive thresholds from, so it is not yet in the watchdog's table (see 6).
 8. **One reordering in the first week.** When the rows of the second collector were merged on 2026-08-24,
    the 24 rows published on 2026-08-18 were kept but their order within each run changed, so the
    2026-08-18 file is not a byte prefix of later files. Every publication since then extends the previous
@@ -435,7 +436,7 @@ only way this series can be evaluated as a track record rather than as a claim.
 ## Reproduce it
 
 ```bash
-python3 collector.py --out my-run.ndjson  # one run, ~100 s, 11 endpoints, no credentials; exit 0=all OK 3=partial 1=none
+python3 collector.py --out my-run.ndjson  # one run, ~100 s, 12 endpoints, no credentials; exit 0=all OK 3=partial 1=none
 python3 freshness_watchdog.py             # audit the series: 0=green 1=yellow 2=red
 python3 to_english.py --english           # English-keyed mirror -> series-en.ndjson
 ```
@@ -447,7 +448,7 @@ matches the published, stamped file.
 |---|---|
 | [`ai-arz-serisi.ndjson`](ai-arz-serisi.ndjson) | the raw series, append-only, keys frozen |
 | [`series-en.ndjson`](series-en.ndjson) | the same data with English keys, generated |
-| [`collector.py`](collector.py) | the collector, 11 endpoints |
+| [`collector.py`](collector.py) | the collector, 12 endpoints |
 | [`freshness_watchdog.py`](freshness_watchdog.py) | the consumer that catches silent zeros |
 | [`run_weekly.sh`](run_weekly.sh) | collect → stamp → audit, as cron runs it; exit 1 = nothing collected, 2 = watchdog red, 3 = partial |
 | [`schema_map.json`](schema_map.json) | the key contract, source of the Schema table |

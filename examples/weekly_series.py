@@ -51,6 +51,7 @@ VALUES = {
     "sherlock_leaderboard":       ("researchers listed", _path("arastirmaci_sayisi")),
     "sherlock_contests":          ("contests open now", _path("acik_yarisma")),
     "code4rena_audits":           ("audits open now", _path("acik_yarisma")),
+    "cantina_competitions":       ("competitions open now", _path("acik_yarisma")),
     "defillama_fees_ai_agents":   ("AI-agent fees, 30d (USD)", _path("ai_total30d")),
     "defillama_summary_virtuals": ("protocol fees, 30d (USD)", _path("total30d")),
     "apify_store":                ("actors in the store", _path("magaza_toplam_aktor")),

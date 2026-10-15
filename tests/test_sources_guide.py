@@ -41,9 +41,10 @@ def test_request_url_is_one_the_collector_uses(cells):
     assert url in CONSTANTS
 
 
-def test_inactive_endpoint_is_named_with_its_url():
-    assert "cantina_competitions" not in [u[0] for u in c.UCLAR]
+def test_latest_endpoint_is_named_with_its_url_and_first_run():
+    assert "cantina_competitions" in [u[0] for u in c.UCLAR]
     assert "https://cantina.xyz/api/v0/competitions" in CONSTANTS and "`https://cantina.xyz/api/v0/competitions`" in GUIDE
+    assert "writes rows from the `2026-10-12T07:00:03+00:00` run onward" in GUIDE
 
 
 def test_constants_have_the_stated_values():

@@ -74,7 +74,7 @@
     },
     {
       "name": "Open-window watch",
-      "note": "Endpoints sherlock_contests, code4rena_audits (and cantina_competitions, implemented but not yet wired). Answers 'how many doors are open right now', which is a different question from 'how many exist'.",
+      "note": "Endpoints sherlock_contests, code4rena_audits and cantina_competitions (rows from the 2026-10-12 run onward). Answers 'how many doors are open right now', which is a different question from 'how many exist'.",
       "keys": [
         ["yarisma_sayisi", "competition_count", "integer | null", "total competitions/audits the platform lists; null when unmeasurable"],
         ["acik_yarisma", "open_count", "integer | null", "how many are open right now (end time in the future); null when unmeasurable"],

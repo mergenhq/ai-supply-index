@@ -19,6 +19,7 @@ against the rows of that period, so later weekly rows do not change them.
 | `sherlock_leaderboard` | `arastirmaci_sayisi` | count of researchers on the leaderboard at run time | new researchers on the board |
 | `sherlock_contests` | `acik_yarisma` | contests open at run time | how many doors were open at that moment, not over the week |
 | `code4rena_audits` | `acik_yarisma` | audits open at run time | as above |
+| `cantina_competitions` | `acik_yarisma` | competitions open at run time | as above; rows from the 2026-10-12 run onward |
 | `defillama_fees_ai_agents` | `ai_total30d` | sum of 30-day fees over the protocols filed as AI Agent **at run time** | both the fees and the set of protocols move: 17, 18 and 19 protocols appear *(series)* |
 | `defillama_summary_virtuals` | `total30d` | 30-day fees of one fixed protocol | a shift of a moving 30-day window, not fees earned that week |
 | `apify_store` | `magaza_toplam_aktor` | actors in the store at run time | net growth of the store |

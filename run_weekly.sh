@@ -2,7 +2,7 @@
 # run_weekly.sh — WEEKLY run wrapper for the AI Supply Index collector.
 #
 # THREE STEPS, each logged with its own return code:
-#   1) COLLECT — collector.py (11 endpoints, unauthenticated public GETs)
+#   1) COLLECT — collector.py (12 endpoints, unauthenticated public GETs)
 #   2) STAMP   — rule: "every OpenTimestamps seal is kept next to an IMMUTABLE copy of what
 #                it sealed" => we stamp a dated FROZEN snapshot, never the moving series.
 #   3) AUDIT   — freshness_watchdog.py (the consumer; an independent daily run is what stops
