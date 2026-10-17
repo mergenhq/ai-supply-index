@@ -50,7 +50,8 @@ earlier runs.
 ## Method
 
 - **12 endpoints** (11 until 2026-10-08; `cantina_competitions` writes rows from the 2026-10-12 run), all public, **no authentication, no account, no scraping of gated content**
-- A complete run takes about **70–190 seconds** for all endpoints (median ≈ 100 s up to 2026-09-28, when there were 11; `saniye` per row);
+- Up to 2026-09-28 (11 endpoints) a complete run took about **70–190 seconds** (median ≈ 100 s); the time grows with the
+  x402 registry (214 s on 2026-10-15; `saniye` per row);
   runs with failed endpoints took up to about an hour (2,317–3,692 s). Cost **$0**
 - Every run appends one line per endpoint to `ai-arz-serisi.ndjson` (JSON Lines, append-only)
 - Runs **twice a week, Mondays and Thursdays 07:00 UTC**, plus an **independent daily freshness watchdog
