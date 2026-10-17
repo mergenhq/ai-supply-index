@@ -48,7 +48,7 @@ def test_latest_endpoint_is_named_with_its_url_and_first_run():
 
 
 def test_constants_have_the_stated_values():
-    assert c.X402_SAYFA_TAVANI == 60 and "`X402_SAYFA_TAVANI` = 60" in GUIDE
+    assert c.X402_SAYFA_TAVANI == 200 and "`X402_SAYFA_TAVANI` = 200" in GUIDE
     assert c.YARISMA_SAYFA_TAVANI == 40 and "`YARISMA_SAYFA_TAVANI` = 40" in GUIDE
     assert c.LLAMA_PROTOKOL == "virtuals-protocol" and "`LLAMA_PROTOKOL` = `virtuals-protocol`" in GUIDE
     assert "while sayfa < 10:" in SOURCE and "10 pages (the top 1,000 by popularity)" in GUIDE

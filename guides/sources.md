@@ -9,7 +9,7 @@ unauthenticated GETs. Raw responses are not stored, only the summaries (README, 
 
 | endpoint | request | pages |
 |---|---|---|
-| `x402_discovery` | `https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=500&offset=%d` | until the reported total is reached or a page is empty; at most `X402_SAYFA_TAVANI` = 60 pages |
+| `x402_discovery` | `https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=500&offset=%d` | until the reported total is reached or a page is empty; at most `X402_SAYFA_TAVANI` = 200 pages |
 | `sherlock_leaderboard` | `https://mainnet-contest.sherlock.xyz/stats/leaderboard` | one request |
 | `sherlock_contests` | `https://mainnet-contest.sherlock.xyz/contests?per_page=100&page=%d` | until `has_next` is false; at most `YARISMA_SAYFA_TAVANI` = 40 pages |
 | `code4rena_audits` | `https://code4rena.com/api/v1/audits?page=%d` | until `nextPage` is empty; at most 40 pages |
