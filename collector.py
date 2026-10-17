@@ -312,7 +312,8 @@ def uc_cantina_competitions():
     MEASURED: the `joined` field reads 'restricted' in 144/144 records => it is NOT a privacy
     signal (it only says we have not joined). Public/private is decided by `kind` alone.
 
-    NOTE: this collector is implemented and measured but NOT yet wired into UCLAR below."""
+    Wired into UCLAR 2026-10-08. The first published row is from the 2026-10-12T07:00:03+00:00 run;
+    earlier runs hold no cantina row, which means 'not connected', not 'nothing open'."""
     simdi = int(time.time())
     _, d = cek("https://cantina.xyz/api/v0/competitions")
     if not isinstance(d, list):
@@ -500,6 +501,8 @@ UCLAR = [
     ("sherlock_contests",         uc_sherlock_contests,    "contest metadata + OPEN-WINDOW watch; archived"),
     # Arena 2 of the open-window watch: open entries are not a Sherlock-only phenomenon.
     ("code4rena_audits",          uc_code4rena_audits,     "audit metadata + OPEN-WINDOW watch; all 19 pages walked"),
+    # Arena 3, wired 2026-10-08; first row in the 2026-10-12T07:00:03+00:00 run.
+    ("cantina_competitions",      uc_cantina_competitions, "competition metadata + OPEN-WINDOW watch; one flat list"),
     ("defillama_fees_ai_agents",  uc_defillama_kategori,   "AI Agents category cross-section"),
     ("defillama_summary_virtuals",uc_defillama_protokol,   "fixed protocol (largest on 2026-08-18); daily series archived"),
     ("apify_store",               uc_apify_store,          "cumulative totalUsers per actor; top 1,000 by popularity"),

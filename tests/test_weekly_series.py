@@ -194,3 +194,66 @@ def test_example_picks_the_same_rows_as_the_readme_snippet():
     ours = {(e["week"], e["endpoint"]): e["zaman_utc"]
             for e in ws.weekly(ws.read_rows(KOK / "ai-arz-serisi.ndjson")) if e["value"] is not None}
     assert ours == snippet
+
+
+class TestCsv:
+    def csv_rows(self, tmp_path, capsys, rows, *extra):
+        import csv
+        import io
+        assert ws.main(["--series", str(series(tmp_path, rows)), "--csv", *extra]) == 0
+        return list(csv.reader(io.StringIO(capsys.readouterr().out)))
+
+    def test_header_and_value_row(self, tmp_path, capsys):
+        out = self.csv_rows(tmp_path, capsys, [row("2026-08-18T07:00:00+00:00", ozet=x402(15149))])
+        assert out == [["week", "endpoint", "value", "zaman_utc", "gap"],
+                       [W34, "x402_discovery", "15149", "2026-08-18T07:00:00+00:00", ""]]
+
+    def test_gap_row_leaves_value_empty_not_zero(self, tmp_path, capsys):
+        out = self.csv_rows(tmp_path, capsys, [row("2026-08-18T07:00:00+00:00", ozet=x402(1)),
+                                               row("2026-08-25T07:00:00+00:00", durum="HATA"),
+                                               row("2026-09-01T07:00:00+00:00", ozet=x402(3))])
+        assert out[2] == [W35, "x402_discovery", "", "", "rows present, none usable"]
+
+    def test_measured_zero_is_written_as_zero(self, tmp_path, capsys):
+        out = self.csv_rows(tmp_path, capsys,
+                            [row("2026-08-18T07:00:00+00:00", "sherlock_contests", {"acik_yarisma": 0})])
+        assert out[1][2] == "0" and out[1][4] == ""
+
+    def test_float_value_round_trips(self, tmp_path, capsys):
+        out = self.csv_rows(tmp_path, capsys, [row("2026-08-18T07:00:00+00:00", "defillama_fees_ai_agents",
+                                                   {"ai_total30d": 902574.56})])
+        assert float(out[1][2]) == 902574.56
+
+    def test_gap_reason_with_a_comma_is_quoted(self, tmp_path, capsys):
+        rows = [row("2026-08-18T07:00:00+00:00", durum="HATA")]
+        assert ws.main(["--series", str(series(tmp_path, rows)), "--csv"]) == 0
+        assert capsys.readouterr().out.splitlines()[1] == '%s,x402_discovery,,,"rows present, none usable"' % W34
+
+    def test_same_rows_as_json(self, tmp_path, capsys):
+        rows = [row("2026-08-18T07:00:00+00:00", ozet=x402(1)), row("2026-09-01T07:00:00+00:00", ozet=x402(3)),
+                row("2026-08-19T07:00:00+00:00", "apify_store", {"magaza_toplam_aktor": 7})]
+        csv_out = self.csv_rows(tmp_path, capsys, rows)[1:]
+        assert ws.main(["--series", str(series(tmp_path, rows)), "--json"]) == 0
+        js = [json.loads(x) for x in capsys.readouterr().out.splitlines()]
+        assert [(r[0], r[1]) for r in csv_out] == [(e["week"], e["endpoint"]) for e in js]
+        for r, e in zip(csv_out, js):
+            assert (r[2] == "") == (e["value"] is None) and r[4] == e.get("gap", "")
+
+    def test_endpoint_filter_applies(self, tmp_path, capsys):
+        out = self.csv_rows(tmp_path, capsys, [row("2026-08-18T07:00:00+00:00", ozet=x402(1)),
+                                               row("2026-08-18T07:00:00+00:00", "apify_store",
+                                                   {"magaza_toplam_aktor": 7})],
+                            "--endpoint", "apify_store")
+        assert [r[1] for r in out[1:]] == ["apify_store"]
+
+    def test_csv_and_json_together_are_rejected(self, tmp_path, capsys):
+        with pytest.raises(SystemExit) as e:
+            ws.main(["--series", str(series(tmp_path, [])), "--csv", "--json"])
+        assert e.value.code == 2
+
+    def test_every_real_series_row_has_a_value_or_a_gap_reason(self, capsys):
+        import csv
+        import io
+        assert ws.main(["--csv"]) == 0
+        out = list(csv.reader(io.StringIO(capsys.readouterr().out)))
+        assert len(out) > 1 and all(r[2] != "" or r[4] != "" for r in out[1:])
