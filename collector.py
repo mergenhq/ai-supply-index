@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AI SUPPLY INDEX — collector for the supply side of the AI economy (weekly snapshot).
+"""AI SUPPLY INDEX — collector for the supply side of the AI economy (twice-weekly runs).
 
 WHY: public measurement of AI mostly covers DEMAND (how many people use it, for what).
 The supply side — who is actually earning, and how concentrated those earnings are — is
