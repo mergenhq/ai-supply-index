@@ -67,6 +67,12 @@ def test_complete_runs_take_70_to_190_seconds_with_a_median_near_100():
     assert 90 <= statistics.median(sureler) <= 110
 
 
+def test_the_2026_10_15_run_took_214_seconds():
+    """'the time grows with the x402 registry (214 s on 2026-10-15; `saniye` per row)'"""
+    rs = KOSULAR["2026-10-15T07:00:02+00:00"]
+    assert round(sum(x.get("saniye") or 0 for x in rs)) == 214
+
+
 def test_one_line_per_endpoint_per_run():
     """'Every run appends one line per endpoint'"""
     assert all(len(rs) == len({x["uc"] for x in rs}) for rs in KOSULAR.values())
