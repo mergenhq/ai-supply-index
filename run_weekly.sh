@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_weekly.sh — WEEKLY run wrapper for the AI Supply Index collector.
+# run_weekly.sh — run wrapper for the AI Supply Index collector.
 #
 # THREE STEPS, each logged with its own return code:
 #   1) COLLECT — collector.py (12 endpoints, unauthenticated public GETs)
@@ -8,8 +8,8 @@
 #   3) AUDIT   — freshness_watchdog.py (the consumer; an independent daily run is what stops
 #                a dead watchdog from looking like a healthy one)
 #
-# WHY ON A SERVER AND NOT A LAPTOP: if the laptop is asleep the missed week CANNOT BE
-# RECOVERED (x402 is a rolling 30 days, Apify is a sliding window, Sherlock is cumulative
+# WHY ON A SERVER AND NOT A LAPTOP: if the laptop is asleep the missed run CANNOT BE
+# RECOVERED (x402 is a rolling 30 days, Apify is a point-in-time sample, Sherlock is cumulative
 # with no historical endpoint). See README.md for the full reasoning.
 set -uo pipefail
 

@@ -237,13 +237,13 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | key (as published) | English | type | what it measures |
 |---|---|---|---|
 | `model_sayisi` | `model_count` | integer | models in the sample |
-| `indirme_dagilimi` | `download_distribution` | object (distribution) | distribution of the models' downloads across the sample (the count the source reports for its recent window, not a cumulative total) |
+| `indirme_dagilimi` | `download_distribution` | object (distribution) | distribution of the models' downloads across the sample |
 | `indirme` | `downloads` | integer | that model's downloads: the count the source reports for its recent window, not a cumulative total; it can fall from one run to the next |
 | `begeni` | `likes` | integer | that model's like count |
 
 #### npm downloads
 
-*Per-package download volume. The upstream clips the range to roughly 547 days, so old data falls off and must be archived.*
+*Per-package download volume. The collector requests the last month; the upstream clips the range to roughly 547 days, so old data falls off and must be archived.*
 
 | key (as published) | English | type | what it measures |
 |---|---|---|---|
@@ -292,7 +292,7 @@ Two kinds of key are generated at runtime and are copied through unchanged:
 
 ### Why the keys stay Turkish
 
-The series is **append-only** and each commit's file is OpenTimestamps-stamped. Renaming the keys in
+The series is **append-only** and each publication is copied to a frozen snapshot that is OpenTimestamps-stamped. Renaming the keys in
 place would make every earlier line unreadable and put two schemas in one file — which is data
 corruption dressed up as tidying. So the keys are **frozen for series continuity**, the map above is
 maintained as the English contract, and an **English-keyed mirror is generated instead**:
@@ -303,7 +303,7 @@ python3 to_english.py --self-test      # proves the map is complete and strict
 ```
 
 [`series-en.ndjson`](series-en.ndjson) is committed alongside the original, so you can use
-English keys today without the original series ever being rewritten.
+English keys without the original series ever being rewritten.
 
 The converter **fails loudly** rather than guessing: any key that is neither in the map nor covered
 by an explicit passthrough rule aborts the run and prints what was missed. A silently dropped key is
@@ -324,11 +324,9 @@ carry the meaning.
 
 ### Known limits (stated, not hidden)
 
-1. **Summaries only.** Raw API payloads are not stored (size); a `bayt` field records payload size for control.
-2. **Sampling where the source paginates.** Apify: top 1,000 of the store (47,257 on 2026-08-18) by popularity; in the OK
-   rows up to 2026-10-05, 835–875 of the 1,000 sampled actors per run (83.5–87.5 %) carry a numeric user count
-   (`taranan` / `scanned` gives the exact number). Hugging Face: top 100.
-   These are **upper-tier samples, not medians** — treat them as such.
+1. **Summaries only.** Raw API payloads are not stored (size); the first (v0.1) rows carry their payload size in `bayt`.
+2. **Sampling where the source paginates.** Apify: top 1,000 by popularity; Hugging Face: top 100. These are
+   **upper-tier samples, not medians** — treat them as such. Per-run coverage (`taranan` / `scanned`) is in *Schema*.
 3. **Schema fragility.** If an endpoint changes shape, a naive reader returns 0 silently. This happened to us
    on day one (`contests` vs `items`), which is why the freshness watchdog checks for silent zeros, frozen
    counters, missing endpoints and open-window listings whose newest entry is months old — not just staleness.
@@ -344,8 +342,8 @@ carry the meaning.
    2026-09-28; the Hugging Face and DeFiLlama category carriers are now the summed downloads and the summed
    30-day fees, which move with every run.
 7. **`cantina_competitions` was wired in on 2026-10-08.** Its first row is in the `2026-10-12T07:00:03+00:00`
-   run; earlier runs hold no cantina row, which means "not connected", not "nothing open". It has too
-   few runs to derive thresholds from, so it is not yet in the watchdog's table (see 6).
+   run; earlier runs hold no cantina row, which means "not connected", not "nothing open". On 2026-10-15 it had
+   too few runs (2) to derive thresholds from, so it was not in the watchdog's table then (see 6).
 8. **One reordering in the first week.** When the rows of the second collector were merged on 2026-08-24,
    the 24 rows published on 2026-08-18 were kept but their order within each run changed, so the
    2026-08-18 file is not a byte prefix of later files. Every publication since then extends the previous
@@ -353,11 +351,16 @@ carry the meaning.
 9. **One incomplete x402 row.** The `x402_discovery` row of the `2026-10-05T07:00:02Z` run walked 60 pages
    (`sayfa`) and scanned 30,000 (`taranan`) of the 34,419 resources the registry reported (`kaynak_sayisi`). It
    carries no `olculemedi` / `unmeasurable` key, so its distributions (`cagri_30g`, `odeyen_30g`) and `top10_cagri`
-   cover only the resources scanned. The row stays as published; the series is append-only.
+   cover only the resources scanned. It was written while the x402 page cap was 60 and a reached cap was not yet
+   marked; the cap is now 200 and a walk that stops at it records `olculemedi`. The row stays as published; the
+   series is append-only.
 
 ---
 
 ## Using the series
+
+Guides: [sources](guides/sources.md) · [reading the values](guides/reading-the-values.md) ·
+[English mirror](guides/english-mirror.md).
 
 One run is all rows sharing a `zaman_utc`. Some days carry more than one run (see *Method*), and a row can
 be incomplete, so pick rows before building a time series:
@@ -415,7 +418,7 @@ the AI economy is itself a conflict worth naming.
 | what | licence | file |
 |---|---|---|
 | **Data** — `ai-arz-serisi.ndjson`, `series-en.ndjson`, `archive/`, `*.ots`, tables in this README | **CC BY 4.0** | `LICENSE-DATA` |
-| **Code** — `collector.py`, `freshness_watchdog.py`, `run_weekly.sh`, `to_english.py`, `schema_map.json`, `tests/` | **MIT** | `LICENSE` |
+| **Code** — `collector.py`, `freshness_watchdog.py`, `run_weekly.sh`, `to_english.py`, `schema_map.json`, `tests/`, `examples/` | **MIT** | `LICENSE` |
 
 Use the data freely, including commercially — attribution is the only condition.
 
@@ -436,7 +439,7 @@ only way this series can be evaluated as a track record rather than as a claim.
 ## Reproduce it
 
 ```bash
-python3 collector.py --out my-run.ndjson  # one run, ~100 s, 12 endpoints, no credentials; exit 0=all OK 3=partial 1=none
+python3 collector.py --out my-run.ndjson  # one run, a few minutes (214 s on 2026-10-15; grows with x402), 12 endpoints, no credentials; exit 0=all OK 3=partial 1=none
 python3 freshness_watchdog.py             # audit the series: 0=green 1=yellow 2=red
 python3 to_english.py --english           # English-keyed mirror -> series-en.ndjson
 ```
@@ -460,4 +463,4 @@ directory). `freshness_watchdog.py --self-test` and `to_english.py --self-test` 
 ---
 
 *Corrections welcome. If a number here is wrong, open an issue with the endpoint and the counter-measurement;
-it will be fixed in the next weekly run and the correction recorded in the series.*
+it will be fixed in the next run and the correction recorded in the series.*

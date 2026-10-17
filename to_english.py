@@ -7,7 +7,7 @@ WHY THIS EXISTS
     unreadable and put two schemas in one file — so the keys stay FROZEN.
     This tool does the safe thing instead: it READS the frozen series and WRITES a separate
     English-keyed mirror (`series-en.ndjson`). Nothing is modified, nothing is re-stamped,
-    and an English-speaking consumer gets usable data today.
+    and an English-speaking consumer gets usable data.
 
 CONTRACT (the reason this is not a one-line dict comprehension)
     Every key must be accounted for. A key that is neither in the map nor covered by an

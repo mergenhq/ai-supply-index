@@ -158,14 +158,14 @@
       "note": "Top 100 models by download count. `downloads` is the count the source reports for its recent window, not a cumulative total, so a model's value can fall from one run to the next; there is no official historical endpoint — this series is the archive.",
       "keys": [
         ["model_sayisi", "model_count", "integer", "models in the sample"],
-        ["indirme_dagilimi", "download_distribution", "object (distribution)", "distribution of the models' downloads across the sample (the count the source reports for its recent window, not a cumulative total)"],
+        ["indirme_dagilimi", "download_distribution", "object (distribution)", "distribution of the models' downloads across the sample"],
         ["indirme", "downloads", "integer", "that model's downloads: the count the source reports for its recent window, not a cumulative total; it can fall from one run to the next"],
         ["begeni", "likes", "integer", "that model's like count"]
       ]
     },
     {
       "name": "npm downloads",
-      "note": "Per-package download volume. The upstream clips the range to roughly 547 days, so old data falls off and must be archived.",
+      "note": "Per-package download volume. The collector requests the last month; the upstream clips the range to roughly 547 days, so old data falls off and must be archived.",
       "keys": [
         ["baslangic", "range_start", "string (date)", "first day of the returned range"],
         ["bitis", "range_end", "string (date)", "last day of the returned range"],
