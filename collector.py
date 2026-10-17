@@ -54,7 +54,8 @@ GH_DEPOLAR = ["langchain-ai/langchain", "anthropics/anthropic-sdk-python",
               "crewAIInc/crewAI", "modelcontextprotocol/servers",
               "Significant-Gravitas/AutoGPT"]
 LLAMA_PROTOKOL = "virtuals-protocol"   # fixed: the largest AI-Agents protocol on 2026-08-18 (89.7 %); not re-selected per run
-X402_SAYFA_TAVANI = 60                 # 60*500 = 30,000 resources; safety brake
+X402_SAYFA_TAVANI = 200                # 200*500 = 100,000 resources; safety brake (the registry listed
+                                       # 34,419 resources on 2026-10-05); reaching it writes olculemedi
 YARISMA_SAYFA_TAVANI = 40              # Sherlock (100/page) and Code4rena (25/page) safety brake
 
 
