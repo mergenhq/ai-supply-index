@@ -1,4 +1,5 @@
 """Checks that the documentation states what the code and the published series actually do."""
+import datetime
 import inspect
 import json
 import re
@@ -46,10 +47,14 @@ def test_hugging_face_sample_is_not_described_as_agent_models():
 
 
 def test_pypi_window_matches_the_series():
-    son = [r for r in seri() if r["uc"] == "pypi_downloads"][-1]["ozet"]
-    gun = max(v["aynasiz_gun"] for v in son.values() if isinstance(v, dict) and "aynasiz_gun" in v)
-    m = re.search(r"roughly (\d+) days", grup_notu("PyPI downloads"))
-    assert m and abs(int(m.group(1)) - gun) <= 10, (m and m.group(1), gun)
+    # the window start stays put between upstream clean-ups, so the day count grows by one per day:
+    # the expected count is the row date minus the documented start, never a fixed number
+    satir = [r for r in seri() if r["uc"] == "pypi_downloads"][-1]
+    gun = max(v["aynasiz_gun"] for v in satir["ozet"].values() if isinstance(v, dict) and "aynasiz_gun" in v)
+    m = re.search(r"window start has stayed at (\d{4}-\d{2}-\d{2})", grup_notu("PyPI downloads"))
+    assert m, "the PyPI note must state the window start date"
+    beklenen = (datetime.date.fromisoformat(satir["zaman_utc"][:10]) - datetime.date.fromisoformat(m.group(1))).days
+    assert abs(beklenen - gun) <= 2, (m.group(1), satir["zaman_utc"], beklenen, gun)
     assert "362" not in (c.uc_pypi.__doc__ or "")
 
 
