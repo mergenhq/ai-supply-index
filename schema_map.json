@@ -178,7 +178,7 @@
     },
     {
       "name": "PyPI downloads",
-      "note": "Per-package download volume excluding mirror traffic. The upstream window is roughly 183 days (about six months), so old data falls off. `non_mirror_total` is the sum over that rolling window, not an all-time total.",
+      "note": "Per-package download volume excluding mirror traffic. The upstream keeps about six months of daily rows and drops older ones in steps, so old data falls off. Since the 2026-10-08 row the window start has stayed at 2026-04-08, so `non_mirror_days` equals the days from that date to the row date and grows by one per day until the upstream drops older rows again. `non_mirror_total` is the sum over that rolling window, not an all-time total.",
       "keys": [
         ["kayit", "records", "integer", "rows returned for the package"],
         ["aynasiz_gun", "non_mirror_days", "integer", "rows in the without_mirrors category"],
