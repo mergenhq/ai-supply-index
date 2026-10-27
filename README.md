@@ -258,7 +258,7 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 
 #### PyPI downloads
 
-*Per-package download volume excluding mirror traffic. The upstream keeps about six months of daily rows and drops older ones in steps, so old data falls off. Since the 2026-10-08 row the window start has stayed at 2026-04-08, so `non_mirror_days` equals the days from that date to the row date and grows by one per day until the upstream drops older rows again. `non_mirror_total` is the sum over that rolling window, not an all-time total.*
+*Per-package download volume excluding mirror traffic. The upstream keeps about six months of daily rows and drops older ones in steps, so old data falls off. Between upstream clean-ups the window start (`first_date`) stays put, so `non_mirror_days` equals the days from the row's own `first_date` to the row date and grows by one per day until the upstream drops older rows again. `non_mirror_total` is the sum over that rolling window, not an all-time total.*
 
 | key (as published) | English | type | what it measures |
 |---|---|---|---|

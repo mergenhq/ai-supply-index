@@ -47,14 +47,17 @@ def test_hugging_face_sample_is_not_described_as_agent_models():
 
 
 def test_pypi_window_matches_the_series():
-    # the window start stays put between upstream clean-ups, so the day count grows by one per day:
-    # the expected count is the row date minus the documented start, never a fixed number
+    # internal consistency: each package's day count is the row date minus that row's own first_date,
+    # so a window start that moves upstream never breaks the test, only a value/date mismatch does
     satir = [r for r in seri() if r["uc"] == "pypi_downloads"][-1]
-    gun = max(v["aynasiz_gun"] for v in satir["ozet"].values() if isinstance(v, dict) and "aynasiz_gun" in v)
-    m = re.search(r"window start has stayed at (\d{4}-\d{2}-\d{2})", grup_notu("PyPI downloads"))
-    assert m, "the PyPI note must state the window start date"
-    beklenen = (datetime.date.fromisoformat(satir["zaman_utc"][:10]) - datetime.date.fromisoformat(m.group(1))).days
-    assert abs(beklenen - gun) <= 2, (m.group(1), satir["zaman_utc"], beklenen, gun)
+    satirdaki = [v for v in satir["ozet"].values() if isinstance(v, dict) and "aynasiz_gun" in v]
+    assert satirdaki, "the last PyPI row must carry per-package day counts"
+    tarih = datetime.date.fromisoformat(satir["zaman_utc"][:10])
+    for v in satirdaki:
+        beklenen = (tarih - datetime.date.fromisoformat(v["ilk_tarih"])).days
+        assert abs(beklenen - v["aynasiz_gun"]) <= 2, (satir["zaman_utc"], v["ilk_tarih"], beklenen, v["aynasiz_gun"])
+    notu = grup_notu("PyPI downloads")
+    assert "first_date" in notu and not re.search(r"\d{4}-\d{2}-\d{2}", notu), "the PyPI note describes the window without a fixed date"
     assert "362" not in (c.uc_pypi.__doc__ or "")
 
 
