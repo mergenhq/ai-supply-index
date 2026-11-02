@@ -355,6 +355,11 @@ carry the meaning.
    cover only the resources scanned. It was written while the x402 page cap was 60 and a reached cap was not yet
    marked; the cap is now 200 and a walk that stops at it records `olculemedi`. The row stays as published; the
    series is append-only.
+10. **One x402 row scanned past the reported total.** The `x402_discovery` row of the `2026-10-29T07:00:02Z` run
+   reports 94,156 resources (`kaynak_sayisi`, taken from the first page) and scanned 94,158 (`taranan`) over 189
+   pages. The walk pages by offset while the registry keeps changing, so an entry can shift across a page boundary
+   and be counted twice, or arrive after the first page was read. The two extra entries (0.002 %) are inside the
+   distributions as published. The row stays as published; the series is append-only.
 
 ---
 

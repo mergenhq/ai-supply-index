@@ -42,6 +42,10 @@ X402 = [r for r in SATIRLAR if r.get("uc") == "x402_discovery" and r.get("durum"
 # A capped x402 row published without `olculemedi`; README "Known limits" describes it.
 X402_KAPSAMSIZ_ISARETSIZ = {"2026-10-05T07:00:02+00:00"}
 
+# x402 rows whose walk scanned more entries than the total the registry reported on the first page
+# (the walk pages by offset while the registry changes); README "Known limits" describes them.
+X402_TOTAL_ASILDI = {"2026-10-29T07:00:02+00:00"}
+
 
 @pytest.mark.parametrize("r", X402, ids=[r["zaman_utc"] for r in X402])
 def test_x402(r):
@@ -53,7 +57,10 @@ def test_x402(r):
         assert type(deger) is int, "x402 %s must be an integer, got %r" % (alan, deger)
     kapsadi = o["sayfa"] * 500 >= o["kaynak_sayisi"]      # the walk covered the registry
     if kapsadi:
-        assert o["taranan"] <= o["kaynak_sayisi"] <= o["sayfa"] * 500
+        if r["zaman_utc"] in X402_TOTAL_ASILDI:
+            assert o["kaynak_sayisi"] < o["taranan"] <= o["sayfa"] * 500
+        else:
+            assert o["taranan"] <= o["kaynak_sayisi"] <= o["sayfa"] * 500
     else:
         assert "olculemedi" in o or r["zaman_utc"] in X402_KAPSAMSIZ_ISARETSIZ, \
             "x402 walked %d pages for %d resources without olculemedi" % (o["sayfa"], o["kaynak_sayisi"])
@@ -62,6 +69,14 @@ def test_x402(r):
     top = [x["cagri"] for x in o["top10_cagri"]]
     assert azalan(top) and len(top) == min(10, o["taranan"])
     assert not top or round(top[0], 2) == o["cagri_30g"]["maks"]
+
+
+def test_the_listed_x402_total_exceptions_really_scanned_past_the_reported_total():
+    satirlar = {r["zaman_utc"]: r["ozet"] for r in X402}
+    for t in X402_TOTAL_ASILDI:
+        if t in satirlar:
+            o = satirlar[t]
+            assert o["sayfa"] * 500 >= o["kaynak_sayisi"] and o["taranan"] > o["kaynak_sayisi"]
 
 
 def test_the_listed_x402_exception_is_a_capped_row_without_olculemedi():
