@@ -364,6 +364,10 @@ carry the meaning.
    counts the repeats, `kimliksiz` the entries without a `resource`) and reads the registry total on every page
    (`kaynak_sayisi_ilk`, `kaynak_sayisi_son`; `kaynak_sayisi` is the last one). If the scan still exceeds the total,
    the row says so with `kaynak_degisti: true` and `kaynak_fark` instead of leaving it silent.
+   The reverse direction is not flagged: drift can also push an entry back into a page already walked, so it is
+   never seen, and a scan that ends below the total (`taranan` < `kaynak_sayisi`) may be an undercount by that gap.
+   If the total shrinks during the walk, the walk stops at the last total read; compare `kaynak_sayisi_ilk` with
+   `kaynak_sayisi_son` to see it.
 
 ---
 
