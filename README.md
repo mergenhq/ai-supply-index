@@ -177,8 +177,8 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | `kaynak_sayisi_son` | `resource_count_last` | integer | total the registry reported on the last page of this walk; `resource_count` carries this value |
 | `cift_sayilan` | `duplicates_dropped` | integer | items skipped because their `resource` was already seen earlier in this walk (offset paging drift) |
 | `kimliksiz` | `items_without_id` | integer | items with no `resource` identifier; they are counted but cannot be de-duplicated |
-| `kaynak_degisti` | `total_exceeded` | boolean | PRESENT ONLY WHEN the scan still exceeds the last reported total after de-duplication: the registry grew during the walk |
-| `kaynak_fark` | `total_excess` | integer | by how many items the scan exceeds `resource_count` (present only with `total_exceeded`) |
+| `kaynak_degisti` | `total_exceeded` | boolean | PRESENT ONLY WHEN the number of scanned items with a numeric 30-day call count exceeds the last reported total (likely registry growth during the walk) |
+| `kaynak_fark` | `total_excess` | integer | by how many scanned items with a numeric 30-day call count exceed `resource_count` (present only with `total_exceeded`) |
 | `cagri_30g` | `calls_30d` | object (distribution) | distribution of paid calls per resource over the last 30 days |
 | `odeyen_30g` | `unique_payers_30d` | object (distribution) | distribution of unique payers per resource over the last 30 days |
 | `top10_cagri` | `top10_by_calls` | array | the ten most-called resources |
@@ -374,6 +374,12 @@ carry the meaning.
    never seen, and a scan that ends below the total (`taranan` < `kaynak_sayisi`) may be an undercount by that gap.
    If the total shrinks during the walk, the walk stops at the last total read; compare `kaynak_sayisi_ilk` with
    `kaynak_sayisi_son` to see it.
+12. **The reported x402 total is volatile; a single-run change is not market growth or decline.** Across the 26 OK runs
+   up to `2026-10-01`, `kaynak_sayisi` stayed between 14,644 and 19,915. Across the 11 OK runs from `2026-10-05` on it moved
+   between 25,838 and 114,961, in both directions: 94,156 on `2026-10-29`, 69,029 on `2026-11-02`, 114,961 on `2026-11-05`,
+   33,091 on `2026-11-09`. The cause of these swings has not been established. The field records what the registry
+   reported at walk time, not how many resources are in active use. Compare runs over several weeks, and read
+   `cagri_30g` and `odeyen_30g` next to it.
 
 ---
 
