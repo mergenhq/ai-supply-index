@@ -108,16 +108,34 @@ def dagilim_ozeti(degerler, kovalar):
 def uc_x402():
     """Walk every page, archive the per-resource 30-day call/payer DISTRIBUTION.
     Shape: {items:[{resource,quality:{l30DaysTotalCalls,l30DaysUniquePayers}}], pagination:{total}}
-    ROLLING 30-DAY WINDOW: there is no history — what is not captured today is gone."""
+    ROLLING 30-DAY WINDOW: there is no history — what is not captured today is gone.
+    OFFSET PAGING DRIFT: the registry moves while we walk, so an item can straddle a page
+    boundary and appear twice. Items are de-duplicated by `resource`; items with no
+    `resource` are still counted but tallied in `kimliksiz`. The total is read on EVERY page
+    (`kaynak_sayisi_ilk` / `kaynak_sayisi_son`); `kaynak_sayisi` = last page's total. If the
+    scan still exceeds it, `kaynak_degisti` + `kaynak_fark` say so (no silent clipping)."""
     tab = "https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources?limit=500&offset=%d"
-    cagri, odeyen, toplam, sayfa = [], [], None, 0
+    cagri, odeyen, sayfa = [], [], 0
+    toplam_ilk, toplam_son = None, None
+    gorulen, cift, kimliksiz = set(), 0, 0
     ilk_uc = []
     while sayfa < X402_SAYFA_TAVANI:
         _, d = cek(tab % (sayfa * 500))
         ogeler = d.get("items", [])
-        if toplam is None:
-            toplam = d.get("pagination", {}).get("total")
+        t = d.get("pagination", {}).get("total")
+        if t is not None:
+            if toplam_ilk is None:
+                toplam_ilk = t
+            toplam_son = t
         for it in ogeler:
+            rid = it.get("resource")
+            if rid is None or rid == "":
+                kimliksiz += 1
+            elif rid in gorulen:
+                cift += 1
+                continue
+            else:
+                gorulen.add(rid)
             # MEASURED 2026-08-18: these fields are NOT top level, they sit under it["quality"].
             # The first v0.2 draft looked at top level -> walked 151 pages and collected 0 values
             # (the "exit=0 + zero rows" trap). Caught in a dry run; never reached the data.
@@ -130,14 +148,19 @@ def uc_x402():
             if isinstance(o, (int, float)):
                 odeyen.append(o)
         sayfa += 1
-        if not ogeler or (toplam is not None and sayfa * 500 >= toplam):
+        if not ogeler or (toplam_son is not None and sayfa * 500 >= toplam_son):
             break
         time.sleep(0.25)
+    toplam = toplam_son
     ilk_uc.sort(key=lambda x: -x[0])
-    o = {"kaynak_sayisi": toplam, "taranan": len(cagri), "sayfa": sayfa,
+    o = {"kaynak_sayisi": toplam, "kaynak_sayisi_ilk": toplam_ilk, "kaynak_sayisi_son": toplam_son,
+         "taranan": len(cagri), "cift_sayilan": cift, "kimliksiz": kimliksiz, "sayfa": sayfa,
          "cagri_30g": dagilim_ozeti(cagri, [1, 10, 100, 1000, 10000]),
          "odeyen_30g": dagilim_ozeti(odeyen, [1, 2, 5, 10, 100]),
          "top10_cagri": [{"cagri": c, "kaynak": r} for c, r in ilk_uc[:10]]}
+    if toplam is not None and len(cagri) > toplam:
+        o["kaynak_degisti"] = True
+        o["kaynak_fark"] = len(cagri) - toplam
     if sayfa >= X402_SAYFA_TAVANI and ogeler and (toplam is None or sayfa * 500 < toplam):
         o["olculemedi"] = _tavan_notu(sayfa, toplam)
     return o

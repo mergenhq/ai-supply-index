@@ -360,6 +360,14 @@ carry the meaning.
    pages. The walk pages by offset while the registry keeps changing, so an entry can shift across a page boundary
    and be counted twice, or arrive after the first page was read. The two extra entries (0.002 %) are inside the
    distributions as published. The row stays as published; the series is append-only.
+11. **Offset-paging drift is now de-duplicated.** The x402 walk de-duplicates entries by `resource` (`cift_sayilan`
+   counts the repeats, `kimliksiz` the entries without a `resource`) and reads the registry total on every page
+   (`kaynak_sayisi_ilk`, `kaynak_sayisi_son`; `kaynak_sayisi` is the last one). If the scan still exceeds the total,
+   the row says so with `kaynak_degisti: true` and `kaynak_fark` instead of leaving it silent.
+   The reverse direction is not flagged: drift can also push an entry back into a page already walked, so it is
+   never seen, and a scan that ends below the total (`taranan` < `kaynak_sayisi`) may be an undercount by that gap.
+   If the total shrinks during the walk, the walk stops at the last total read; compare `kaynak_sayisi_ilk` with
+   `kaynak_sayisi_son` to see it.
 
 ---
 

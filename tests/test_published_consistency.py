@@ -47,6 +47,24 @@ X402_KAPSAMSIZ_ISARETSIZ = {"2026-10-05T07:00:02+00:00"}
 X402_TOTAL_ASILDI = {"2026-10-29T07:00:02+00:00"}
 
 
+def x402_tutarli(o, zaman_utc):
+    """The walk-coverage checks of one x402 row summary; raises AssertionError when it disagrees."""
+    kapsadi = o["sayfa"] * 500 >= o["kaynak_sayisi"]      # the walk covered the registry
+    if kapsadi:
+        if o.get("kaynak_degisti") is True:
+            # de-duplicated walk that still passed the total: the row states the gap itself
+            assert o["taranan"] - o["kaynak_sayisi"] == o["kaynak_fark"]
+            assert o["taranan"] <= o["sayfa"] * 500
+        elif zaman_utc in X402_TOTAL_ASILDI:
+            assert o["kaynak_sayisi"] < o["taranan"] <= o["sayfa"] * 500
+        else:
+            assert o["taranan"] <= o["kaynak_sayisi"] <= o["sayfa"] * 500
+    else:
+        assert "olculemedi" in o or zaman_utc in X402_KAPSAMSIZ_ISARETSIZ, \
+            "x402 walked %d pages for %d resources without olculemedi" % (o["sayfa"], o["kaynak_sayisi"])
+        assert o["taranan"] <= o["sayfa"] * 500 < o["kaynak_sayisi"]
+
+
 @pytest.mark.parametrize("r", X402, ids=[r["zaman_utc"] for r in X402])
 def test_x402(r):
     o = r["ozet"]
@@ -55,20 +73,19 @@ def test_x402(r):
     for alan in ("kaynak_sayisi", "sayfa"):
         deger = o.get(alan)
         assert type(deger) is int, "x402 %s must be an integer, got %r" % (alan, deger)
-    kapsadi = o["sayfa"] * 500 >= o["kaynak_sayisi"]      # the walk covered the registry
-    if kapsadi:
-        if r["zaman_utc"] in X402_TOTAL_ASILDI:
-            assert o["kaynak_sayisi"] < o["taranan"] <= o["sayfa"] * 500
-        else:
-            assert o["taranan"] <= o["kaynak_sayisi"] <= o["sayfa"] * 500
-    else:
-        assert "olculemedi" in o or r["zaman_utc"] in X402_KAPSAMSIZ_ISARETSIZ, \
-            "x402 walked %d pages for %d resources without olculemedi" % (o["sayfa"], o["kaynak_sayisi"])
-        assert o["taranan"] <= o["sayfa"] * 500 < o["kaynak_sayisi"]
+    x402_tutarli(o, r["zaman_utc"])
     assert o["cagri_30g"]["n"] == o["taranan"] and o["odeyen_30g"]["n"] <= o["taranan"]
     top = [x["cagri"] for x in o["top10_cagri"]]
     assert azalan(top) and len(top) == min(10, o["taranan"])
     assert not top or round(top[0], 2) == o["cagri_30g"]["maks"]
+
+
+def test_x402_tutarli_accepts_a_row_whose_stated_gap_matches_and_rejects_a_wrong_one():
+    iyi = {"kaynak_sayisi": 598, "sayfa": 2, "taranan": 600, "kaynak_degisti": True, "kaynak_fark": 2}
+    x402_tutarli(iyi, "2099-01-01T00:00:00+00:00")
+    yanlis = dict(iyi, kaynak_fark=1)
+    with pytest.raises(AssertionError):
+        x402_tutarli(yanlis, "2099-01-01T00:00:00+00:00")
 
 
 def test_the_listed_x402_total_exceptions_really_scanned_past_the_reported_total():
