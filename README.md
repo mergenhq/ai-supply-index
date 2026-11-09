@@ -173,6 +173,12 @@ via `python3 to_english.py --schema-md`, so the two cannot drift apart.
 | key (as published) | English | type | what it measures |
 |---|---|---|---|
 | `kaynak_sayisi` | `resource_count` | integer | resources registered in the discovery index |
+| `kaynak_sayisi_ilk` | `resource_count_first` | integer | total the registry reported on the first page of this walk |
+| `kaynak_sayisi_son` | `resource_count_last` | integer | total the registry reported on the last page of this walk; `resource_count` carries this value |
+| `cift_sayilan` | `duplicates_dropped` | integer | items skipped because their `resource` was already seen earlier in this walk (offset paging drift) |
+| `kimliksiz` | `items_without_id` | integer | items with no `resource` identifier; they are counted but cannot be de-duplicated |
+| `kaynak_degisti` | `total_exceeded` | boolean | PRESENT ONLY WHEN the scan still exceeds the last reported total after de-duplication: the registry grew during the walk |
+| `kaynak_fark` | `total_excess` | integer | by how many items the scan exceeds `resource_count` (present only with `total_exceeded`) |
 | `cagri_30g` | `calls_30d` | object (distribution) | distribution of paid calls per resource over the last 30 days |
 | `odeyen_30g` | `unique_payers_30d` | object (distribution) | distribution of unique payers per resource over the last 30 days |
 | `top10_cagri` | `top10_by_calls` | array | the ten most-called resources |
